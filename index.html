@@ -372,6 +372,11 @@ body.touch.armado:not(.veh) #bJump{right:222px!important;bottom:calc(env(safe-ar
 body.touch.armado:not(.veh) #bGun{right:204px!important;bottom:calc(env(safe-area-inset-bottom,0px) + 138px)!important}
 /* conversa: próximo passo do namoro/amizade */
 .convTopo .convPasso{display:block;margin:8px auto 0;max-width:92%;font:600 12.5px/1.3 "Barlow",Arial;font-style:normal;color:#ffd6ea;background:rgba(255,95,162,.14);border:1px solid rgba(255,95,162,.35);border-radius:10px;padding:6px 10px}
+
+/* táxi: tela escurece durante a viagem */
+#taxiFade{position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#0b0a12;color:#fff;opacity:0;pointer-events:none;transition:opacity .45s}
+#taxiFade.on{opacity:1;pointer-events:auto}#taxiFade div{font-size:64px;animation:taxiAnda 1s ease-in-out infinite alternate}#taxiFade b{font:800 26px "Barlow Condensed",Arial;letter-spacing:.1em;color:#ffd24a}#taxiFade small{font:600 15px Arial;opacity:.8}
+@keyframes taxiAnda{from{transform:translateX(-18px)}to{transform:translateX(18px)}}
 </style>
 </head>
 <body>
@@ -459,7 +464,7 @@ const angDiff=(a,b)=>{let d=b-a;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+
 const IS_MOBILE=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)||('ontouchstart' in window&&innerWidth<900);
 
 /* ---------- versão dos arquivos (evita o navegador usar arquivo velho guardado) ---------- */
-const BUILD='202609252159';const ASSET=f=>f+'?v='+BUILD;
+const BUILD='202609252319';const ASSET=f=>f+'?v='+BUILD;
 /* ---------- save ---------- */
 const SAVE_KEY='crown-city-v1';
 let save={m:0,money:150,side:0,house:0};
@@ -882,7 +887,8 @@ const IDLES=['Idle','Idle_TalkingPhone_Loop','Idle_FoldArms_Loop','Consume','Idl
 
 function updateActor(a,dt,now){
   a.c.mixer.update(dt);if(a.kind==='player')return;
-  if(a.actUntil&&now<a.actUntil)return;// fazendo uma animação de conversa (beijo, presente...): fica parada até terminar
+  if(a.actUntil&&now<a.actUntil)return;
+  if(a.vindo)return;// contato vindo até você: o andar é controlado em stepVisitas// fazendo uma animação de conversa (beijo, presente...): fica parada até terminar
   if(!a.alive){a.deadT+=dt;if(a.deadT>30)a.remove=true;return}
   if(a.down){stepDown(a,dt);return}
   if(a.homie){homieAI(a,dt);return}if(a.crew)return;
@@ -3366,8 +3372,9 @@ function phoneGo(app){PHONE.app=app;renderPhone()}
 function renderPhone(){const S=$('phScr');const hh=String(Math.floor(dayT*24)).padStart(2,'0')+':'+String(Math.floor((dayT*24%1)*60)).padStart(2,'0');$('phClock').textContent=hh;
   const back='<button class="phBack" onclick="phoneGo(\'home\')">‹ Início</button>';let h='';
   if(PHONE.app==='home'){const un=(save.sms||[]).filter(m=>!m.read).length;
-    const apps=[['missoes','🎯','Missões'],['contatos','👥','Contatos'],['sms','💬','Mensagens'+(un?` (${un})`:'')],['mapa','🗺️','Mapa'],['radio','🎧','Rádio'],['banco','💰','Banco'],['danca','💃','Dançar']];
+    const apps=[['missoes','🎯','Missões'],['contatos','👥','Contatos'],['sms','💬','Mensagens'+(un?` (${un})`:'')],['mapa','🗺️','Mapa'],['radio','🎧','Rádio'],['banco','💰','Banco'],['danca','💃','Dançar'],['codigos','🔑','Códigos']];
     h='<div class="phGrid">'+apps.map(([id,ic,nm])=>`<button class="phApp" onclick="phoneGo('${id}')"><span>${ic}</span><small>${nm}</small></button>`).join('')+'</div>';}
+  else if(PHONE.app==='codigos'){h=back+'<h4>Códigos</h4><div class="phCard"><p>Digite um código e toque em Usar.</p><input id="phCodigo" autocomplete="off" autocapitalize="characters" placeholder="ex.: CROWN50" style="width:100%;padding:10px;border-radius:10px;border:1px solid #555;background:#111;color:#fff;font:700 16px Arial;letter-spacing:.08em;margin:6px 0"><button class="phBtn" onclick="usarCodigo()">Usar</button><p id="phCodRes" style="margin-top:8px"></p></div><div class="phCard"><b>Códigos</b><p>CROWN50 · + $ 50.000<br>RICA · + $ 500.000<br>RESPEITO · +5 respeito<br>VIDA · vida cheia<br>SEMPOLICIA · tira as estrelas</p></div>'}
   else if(PHONE.app==='missoes'){const m=MISSION();const t=m?m.title:'Nenhuma missão agora';const md=(typeof MD!=='undefined'&&MD[t])||{};
     h=back+`<h4>Missão atual</h4><div class="phCard"><b>${t}</b><p>${$('obj').textContent||md.syn||''}</p>${md.loc?`<small>📍 ${md.loc}</small>`:''}</div>
       <h4>Outras atividades</h4><div class="phCard"><b>Madame Rubi</b><p>Trabalhos no Clube Veludo.</p></div><div class="phCard"><b>Docas · Capitã Nena</b><p>Serviços de barco no porto.</p></div>
@@ -4034,6 +4041,62 @@ function stepNovos(dt){if(typeof EXT==='undefined'||!(EXT.ready||EXT.failed||NOW
   nvChao();nvCarregar('trem.glb');if(!IS_MOBILE||sul){nvCarregar('bmw.glb');nvCarregar('moto.glb');nvCarregar('estatua.glb')}if(!IS_MOBILE||mar||sul)nvCarregar('pista.glb');
   stepShow(dt);stepEstatua(dt);stepTrem(dt);stepPista(dt);
   if(tremPerto()){const b=$('bCar');if(b)b.classList.remove('dim')}}
+/* ===================== CONTATOS DE VERDADE: horário de trabalho, táxi até o trabalho (lá dentro) e visita que vem mesmo =====================
+   + código de dinheiro no celular do jogo (app Códigos) */
+const TRABALHO={jorge:{de:10,ate:23,onde:'no bar',lugar:'bar'},tati:{de:20,ate:4,onde:'no Clube Veludo',lugar:'clube'},neide:{de:7,ate:18,onde:'na banca de jornal',lugar:'rua'},
+  rafa:{de:8,ate:18,onde:'na oficina',lugar:'rua'},lia:{de:9,ate:17,onde:'numa sessão de fotos',lugar:'rua'}};
+function horaJogo(){return (dayT*24)%24}
+function trabalhando(c){const T=TRABALHO[c.id];if(!T)return false;const h=horaJogo();return T.de<T.ate?h>=T.de&&h<T.ate:h>=T.de||h<T.ate}
+function hh(h){return String(h).padStart(2,'0')+'h'}
+/* ---------- chamar pelo celular ---------- */
+phoneInvite=function(id){const c=CONTACTS.find(c=>c.id===id);if(!c)return;togglePhone();
+  if(trabalhando(c)){const T=TRABALHO[c.id];const destino=destinoTrabalho(c);const preco=destino?Math.round(15+destino.distanceTo(player.pos)*.25):0;
+    openPanel('📞 '+c.name,`"Agora não dá, tô trabalhando ${T.onde} até as ${hh(T.ate)}. Passa aqui!"`,[
+      {t:'🚕 Pegar táxi até '+c.name,s:T.lugar==='rua'?'Você desce do lado dele':'Você chega lá dentro, '+T.onde,b:'$ '+preco,price:preco,dis:!destino||pcar(),fn:()=>{closePanel();taxiAte(c)}},
+      {t:'Deixar para depois',s:'',b:'Ok',price:0,fn:()=>closePanel()}]);return}
+  if(typeof spawnContacts==='function'&&(!c.actor||!c.actor.alive))spawnContacts();const a=c.actor;if(!a||!a.alive){banner('📞 '+c.name,'Não atendeu. Tenta daqui a pouco.');return}
+  // livre: vem de verdade, andando até você (acompanha você se você andar)
+  const ang=Math.random()*6.28,p=player.pos.clone().add(new V3(Math.cos(ang)*26,0,Math.sin(ang)*26));const livre=q=>!COLL.some(k=>q.x>k.x0-.5&&q.x<k.x1+.5&&q.z>k.z0-.5&&q.z<k.z1+.5);
+  let q=p;for(let t=0;t<30&&!livre(q);t++){const a2=Math.random()*6.28;q=player.pos.clone().add(new V3(Math.cos(a2)*(18+t),0,Math.sin(a2)*(18+t)))}
+  if(a.pos.distanceTo(player.pos)>30){a.pos.copy(q).setY(.18)}a.vindo={c,t:0};a.state='idle';banner('📞 '+c.name,'"Tô indo aí! Me espera."');sms&&sms(c.name,'Tô indo aí!')};
+function stepVisitas(dt){for(const c of CONTACTS){const a=c.actor;if(!a||!a.alive||!a.vindo)continue;const V=a.vindo;V.t+=dt;const d=player.pos.clone().sub(a.pos).setY(0),dist=d.length();
+    if(dist<4.3){a.vindo=null;a.visitou=NOW;turnTo(a,Math.atan2(d.x,d.z),1,1);play(a.c,'Wave',{once:true});bubble(a,'Cheguei! O que manda?');
+      setTimeout(()=>{if(state==='play'&&!pcar()&&a.alive&&a.pos.distanceTo(player.pos)<7)openContact(c)},1200);continue}
+    if(dist>90||V.t>70){a.pos.copy(player.pos).add(d.normalize().multiplyScalar(-14)).setY(.18);continue}// longe demais: pega um atalho
+    const v=dist>14?5.2:2.6;const passo=d.normalize().multiplyScalar(v*dt);const np=a.pos.clone().add(passo);
+    const bate=k=>np.x>k.x0-.35&&np.x<k.x1+.35&&np.z>k.z0-.35&&np.z<k.z1+.35&&(k.h||9)>.5;const k=COLL.find(bate);
+    if(k){const lx=new V3(a.pos.x+passo.x,a.pos.y,a.pos.z),lz=new V3(a.pos.x,a.pos.y,a.pos.z+passo.z);const ok=q=>!COLL.some(kk=>q.x>kk.x0-.35&&q.x<kk.x1+.35&&q.z>kk.z0-.35&&q.z<kk.z1+.35&&(kk.h||9)>.5);
+      if(ok(lx))a.pos.copy(lx);else if(ok(lz))a.pos.copy(lz);else a.pos.add(new V3(-passo.z,0,passo.x).multiplyScalar(1.5))}else a.pos.copy(np);
+    a.yaw=Math.atan2(d.x,d.z);a.c.g.rotation.y=a.yaw;a.c.g.position.copy(a.pos);play(a.c,dist>14?'Run':'Walk')}
+  // depois da visita, volta para o lugar dele quando você se afasta
+  for(const c of CONTACTS){const a=c.actor;if(a&&a.alive&&a.visitou&&!a.vindo&&a.pos.distanceTo(player.pos)>45&&typeof contactPos==='function'){a.visitou=0;a.pos.copy(contactPos(c));a.c.g.position.copy(a.pos)}}}
+/* ---------- táxi: tela escurece, você paga e chega no trabalho da pessoa (lá dentro) ---------- */
+function destinoTrabalho(c){const T=TRABALHO[c.id];if(!T)return null;if(T.lugar==='bar'){const b=BARS&&BARS[0];return b&&b.pos?b.pos.clone():null}
+  if(T.lugar==='clube'){if(typeof setupClubDoor==='function')setupClubDoor();return CLUB_DOOR?CLUB_DOOR.pos.clone():null}return typeof contactPos==='function'?contactPos(c):null}
+let TRAB_NPC=null;
+function taxiAte(c){const T=TRABALHO[c.id],dest=destinoTrabalho(c);if(!dest)return;let f=document.getElementById('taxiFade');if(!f){f=document.createElement('div');f.id='taxiFade';document.body.appendChild(f)}
+  f.innerHTML='<div>🚕</div><b>Táxi</b><small>Indo até '+c.name+'…</small>';f.classList.add('on');sfx('door');player.busy=true;
+  setTimeout(()=>{player.busy=false;if(inHouse&&typeof exitHouse==='function')exitHouse();
+    if(T.lugar==='bar'){const b=BARS[0];player.pos.copy(b.pos).setY(.18);barCool=0;HCTX={deco:b.deco,door:b.pos.clone(),bar:b.id};enterHouse();setTimeout(()=>colocarNoTrabalho(c),900)}
+    else if(T.lugar==='clube'){player.pos.copy(CLUB_DOOR.pos).setY(.18);clubCool=0;const useSci=EXT.ready&&INT.scibar;HCTX={deco:useSci?'scibar':'timeroom',door:CLUB_DOOR.pos.clone(),club:true,bar:useSci?'veludo':undefined};enterHouse();setTimeout(()=>colocarNoTrabalho(c),900)}
+    else{if(typeof spawnContacts==='function')spawnContacts();const a=c.actor;const p=dest.clone();const lado=new V3(2.4,0,0);player.pos.copy(p.add(lado)).setY(.18);if(a){turnTo(a,Math.atan2(player.pos.x-a.pos.x,player.pos.z-a.pos.z),1,1);bubble(a,'Ah, você veio! Tô trabalhando, mas dá pra conversar.')}}
+    camYaw=player.yaw;setTimeout(()=>f.classList.remove('on'),350)},1500)}
+// dentro do bar/clube, a pessoa está lá trabalhando (Seu Jorge no balcão, Tati na mesa de DJ)
+function colocarNoTrabalho(c){if(!inHouse||!houseG)return;let p=null;
+  if(c.id==='jorge'){const s=spots.find(s=>s.id==='beber');if(s)p=s.p.clone().add(new V3(0,0,-1.4))}
+  else if(c.id==='tati'){const dj=BAR_NPCS.find(a=>a.dj);if(dj){p=dj.pos.clone();removeActor(dj);BAR_NPCS.splice(BAR_NPCS.indexOf(dj),1)}}
+  if(!p)p=player.pos.clone().add(new V3(2,0,2));p.y=HO.y;
+  if(TRAB_NPC&&TRAB_NPC.a)removeActor(TRAB_NPC.a);const a=spawnActor('boss',p,safeSpec(c.spec()));a.contact=c.id;a.ally=true;a.state='idle';
+  TRAB_NPC={a,c,antigo:c.actor};c.actor=a;turnTo(a,Math.atan2(player.pos.x-a.pos.x,player.pos.z-a.pos.z),1,1);
+  if(c.id==='tati'&&EXT.dances&&EXT.dances.hiphop4)startDance(a.c,'hiphop4');bubble(a,c.id==='jorge'?'Olha só quem apareceu! Senta aí, filha.':'Ei! Chegou na hora do meu set!');
+  banner(c.name,'Chegue perto e FALAR para conversar')}
+function stepTrabalho(){if(TRAB_NPC&&!inHouse){removeActor(TRAB_NPC.a);TRAB_NPC.c.actor=TRAB_NPC.antigo&&TRAB_NPC.antigo.alive?TRAB_NPC.antigo:null;TRAB_NPC=null}}
+/* ---------- código de dinheiro: app Códigos no celular ---------- */
+const CODIGOS={CROWN50:()=>{addMoney(50000);return'+ $ 50.000'},RICA:()=>{addMoney(500000);return'+ $ 500.000'},RESPEITO:()=>{if(typeof addResp==='function')addResp(5);return'+5 de respeito'},
+  VIDA:()=>{player.hp=player.max;return'Vida cheia'},SEMPOLICIA:()=>{if(typeof clearWanted==='function')clearWanted();else if(typeof wanted!=='undefined')wanted=0;return'Polícia esqueceu você'}};
+function usarCodigo(){const i=document.getElementById('phCodigo');if(!i)return;const k=i.value.trim().toUpperCase().replace(/\s/g,'');const fn=CODIGOS[k];const r=document.getElementById('phCodRes');
+  if(fn){const t=fn();sfx('cash');if(r)r.innerHTML='✅ '+t;banner('🔑 Código aceito',t);i.value=''}else if(r)r.innerHTML='❌ Código inválido'}
+function stepContatos(dt){stepVisitas(dt);stepTrabalho()}
 const pedal={gas:false,brake:false,left:false,right:false,steer:0};
 /* ===================== CONTROLES ===================== */
 const keys={};
@@ -4147,7 +4210,7 @@ function loop(t){requestAnimationFrame(loop);const dt=Math.min(.05,(t-last)/1000
   if(atkHeld&&player.gun&&WEAP[player.weapon].auto)doAttack();
   updatePlayer(dt);const P=player.pos;
   for(const a of ACTORS){if(a===player)continue;const d=a.pos.distanceTo(P);if(d>70&&frame%3)continue;updateActor(a,d>70?dt*3:dt,NOW)}
-  stepDay(dt);stepFolego(dt);stepBalada(dt);stepAereo(dt);stepConversa(dt);stepTeclas(dt);stepAutoTiro(dt);stepNovos(dt);stepPontes(dt);stepHud();if(!window._cullOk&&typeof fixInstCull==='function'&&NOW>2){window._cullOk=1;fixInstCull()}if(NOW>6&&window._cullOk===1){window._cullOk=2;fixInstCull()}stepTalk(dt);stepRain(dt);stepAllies(dt);stepBubbles(dt);stepServices(dt);stepRadio(dt);stepSea(dt);stepCrowns(dt);stepBeauty(dt);stepBoatRiders(dt);stepTyping(dt);stepContacts(dt);stepEvents(dt);stepAim(dt);stepShopFront(dt);stepLook(dt);stepPicks(dt);autosave(dt);stepDrivers(dt);stepVest();stepRadio2();stepSkids(dt);stepAssist(dt);stepHolster();stepProps(dt);stepChests(dt);stepWheel();stepPie();stepBars(dt);stepPlayerDance();stepJump(dt);stepClubDoor(dt);stepClub(dt);separate();updateCars(dt,NOW);stepDebris(dt);stepFX(dt);stepCash(dt);stepMolotov(dt);checkShop(dt);checkHouseDoor(dt);checkActivities(dt);checkHints(dt);if(inHouse)spots.forEach(s=>s.m.material.opacity=.45+.35*Math.sin(NOW*4));managePolice(dt);checkMission(dt);
+  stepDay(dt);stepFolego(dt);stepBalada(dt);stepAereo(dt);stepConversa(dt);stepTeclas(dt);stepAutoTiro(dt);stepNovos(dt);stepContatos(dt);stepPontes(dt);stepHud();if(!window._cullOk&&typeof fixInstCull==='function'&&NOW>2){window._cullOk=1;fixInstCull()}if(NOW>6&&window._cullOk===1){window._cullOk=2;fixInstCull()}stepTalk(dt);stepRain(dt);stepAllies(dt);stepBubbles(dt);stepServices(dt);stepRadio(dt);stepSea(dt);stepCrowns(dt);stepBeauty(dt);stepBoatRiders(dt);stepTyping(dt);stepContacts(dt);stepEvents(dt);stepAim(dt);stepShopFront(dt);stepLook(dt);stepPicks(dt);autosave(dt);stepDrivers(dt);stepVest();stepRadio2();stepSkids(dt);stepAssist(dt);stepHolster();stepProps(dt);stepChests(dt);stepWheel();stepPie();stepBars(dt);stepPlayerDance();stepJump(dt);stepClubDoor(dt);stepClub(dt);separate();updateCars(dt,NOW);stepDebris(dt);stepFX(dt);stepCash(dt);stepMolotov(dt);checkShop(dt);checkHouseDoor(dt);checkActivities(dt);checkHints(dt);if(inHouse)spots.forEach(s=>s.m.material.opacity=.45+.35*Math.sin(NOW*4));managePolice(dt);checkMission(dt);
   keepT-=dt;if(keepT<=0){keepT=2;checkGarage();keepRaceCar();keepBoats()}
   popT-=dt;if(popT<=0){popT=.5;if(!inHouse){managePop();manageParked()}accrue();}
   updateCamera(dt);updHUD(dt);if(frame%3===0)drawMinimap();if(frame%10===0)updButtons();loopSounds();
