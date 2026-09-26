@@ -476,7 +476,7 @@ const angDiff=(a,b)=>{let d=b-a;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+
 const IS_MOBILE=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)||('ontouchstart' in window&&innerWidth<900);
 
 /* ---------- versão dos arquivos (evita o navegador usar arquivo velho guardado) ---------- */
-const BUILD='202609260028';const ASSET=f=>f+'?v='+BUILD;
+const BUILD='202609260033';const ASSET=f=>f+'?v='+BUILD;
 /* ---------- save ---------- */
 const SAVE_KEY='crown-city-v1';
 let save={m:0,money:150,side:0,house:0};
@@ -812,7 +812,8 @@ function varyPeleCabelo(o){const tone=pick(TONES),hair=pick(HAIRC);o.traverse(x=
 function mixDaJogadora(){return (typeof player!=='undefined'&&player&&player.c&&player.c.mixId)||(save&&save.char&&save.char.type==='mx'?save.char.id:null)}
 function mixEmUso(){const s=new Set();const eu=mixDaJogadora();if(eu)s.add(eu);const P=typeof player!=='undefined'&&player?player.pos:null;
   for(const a of ACTORS)if(a.alive&&a.kind!=='player'&&a.c.mixId&&(!P||a.pos.distanceTo(P)<110))s.add(a.c.mixId);return s}
-function escolherMix(pref){const uso=mixEmUso();if(pref&&PEOPLE[pref]&&!uso.has(pref))return pref;const livres=Object.keys(PEOPLE).filter(id=>!uso.has(id));return livres.length?pick(livres):null}
+const MIX_EXCLUSIVOS=new Set(['jorge']);// modelos de contatos: não aparecem em pedestres nem dançarinos
+function escolherMix(pref){const uso=mixEmUso();if(pref&&PEOPLE[pref]&&!uso.has(pref)&&!MIX_EXCLUSIVOS.has(pref))return pref;const livres=Object.keys(PEOPLE).filter(id=>!uso.has(id)&&!MIX_EXCLUSIVOS.has(id));return livres.length?pick(livres):null}
 const TINTS_VAR=['#ffe9dc','#e3ecff','#efe3ff','#e2ffe9','#fff6d8','#ffe0ea'],HAIRV=['#1a1310','#6b4226','#a8743d','#d9b26f','#5a1e1e','#8a8a8a','#b8336a','#2a2a3a'];
 function variarMix(c,n){c.o.traverse(m=>{if(!m.isMesh)return;const mats=Array.isArray(m.material)?m.material:[m.material];const novos=mats.map(x=>{const y=x.clone();
     if(/hair/i.test(x.name||''))y.color=lin(HAIRV[(n*3+1)%HAIRV.length]);else y.color=lin(TINTS_VAR[(n-1+TINTS_VAR.length)%TINTS_VAR.length]);return y});m.material=Array.isArray(m.material)?novos:novos[0]});
@@ -4124,7 +4125,16 @@ const CODIGOS={CROWN50:()=>{addMoney(50000);return'+ $ 50.000'},RICA:()=>{addMon
   VIDA:()=>{player.hp=player.max;return'Vida cheia'},SEMPOLICIA:()=>{if(typeof clearWanted==='function')clearWanted();else if(typeof wanted!=='undefined')wanted=0;return'Polícia esqueceu você'}};
 function usarCodigo(){const i=document.getElementById('phCodigo');if(!i)return;const k=i.value.trim().toUpperCase().replace(/\s/g,'');const fn=CODIGOS[k];const r=document.getElementById('phCodRes');
   if(fn){const t=fn();sfx('cash');if(r)r.innerHTML='✅ '+t;banner('🔑 Código aceito',t);i.value=''}else if(r)r.innerHTML='❌ Código inválido'}
-function stepContatos(dt){stepVisitas(dt);stepTrabalho()}
+/* ---------- Seu Jorge com modelo próprio (jorge.glb) ---------- */
+let JORGE_PEDIDO=false;
+function carregarJorge(){if(JORGE_PEDIDO||typeof peopleLoaded==='undefined'||!peopleLoaded)return;JORGE_PEDIDO=true;
+  loadBig('jorge.glb',g=>{const o=g.scene.getObjectByName('P_jorge');if(!o)return;PEOPLE.jorge=o;const c=CONTACTS.find(c=>c.id==='jorge');if(!c)return;c.spec=()=>({mix:'jorge'});
+    // troca o Jorge que já está na cena pelo modelo novo
+    if(c.actor&&c.actor.alive&&!c.actor.c.mix){const a=c.actor,pos=a.pos.clone(),yaw=a.yaw;removeActor(a);const na=spawnActor('boss',pos,{mix:'jorge'});na.contact=c.id;na.ally=true;na.yaw=yaw;na.c.g.rotation.y=yaw;na.idleAnim='Idle';c.actor=na;
+      if(TRAB_NPC&&TRAB_NPC.a===a)TRAB_NPC.a=na}},null,()=>{})}
+function trocarJorge(){if(!PEOPLE.jorge)return;const c=CONTACTS.find(c=>c.id==='jorge');if(!c)return;c.spec=()=>({mix:'jorge'});const a=c.actor;if(!a||!a.alive||a.c.mixId==='jorge')return;
+  const pos=a.pos.clone(),yaw=a.yaw;removeActor(a);const na=spawnActor('boss',pos,{mix:'jorge'});na.contact=c.id;na.ally=true;na.yaw=yaw;na.c.g.rotation.y=yaw;na.idleAnim='Idle';na.vindo=a.vindo;na.visitou=a.visitou;c.actor=na;if(TRAB_NPC&&TRAB_NPC.a===a)TRAB_NPC.a=na}
+function stepContatos(dt){carregarJorge();trocarJorge();stepVisitas(dt);stepTrabalho()}
 /* ===================== CENAS MOSTRADAS: presente na mão, puxar do carro (sem arremesso), táxi de verdade, saídas e encontros ===================== */
 // ---------- mão direita de uma personagem (realista ou montável) ----------
 function maoDireita(ch){if(!ch||!ch.o)return null;if(ch.mix&&typeof mxPref==='function'){const b=ch.o.getObjectByName(BN(mxPref(ch.o),'RightHand'));if(b)return b}
@@ -4289,7 +4299,8 @@ function checkFiles(em){const L=$('loadTxt');L.innerHTML='Conferindo os arquivos
   .then(rs=>{L.innerHTML=rs.map(([f,n,got,h])=>{const ok=got===n&&h&&String.fromCharCode(...h)==='glTF';
       const tx=got===null?'sem conexão':got<0?'não encontrado (erro '+(-got)+')':(got.toLocaleString('pt-BR')+' bytes'+(got!==n?' — deveria ter '+n.toLocaleString('pt-BR'):''));
       return (ok?'✓ ':'✗ ')+'<b>'+f+'</b>: '+tx}).join('<br>')+'<br><span style="opacity:.7">Os arquivos com ✗ precisam ser enviados de novo (baixe no computador, confira o tamanho e suba). Detalhe técnico: '+em+'</span>'})}
-function assetStatus(){const L=[['predios.glb','Prédios realistas'],['extras.glb','Extras (bares, ilhas, danças)'],['texturas.glb','Texturas reais'],['interiores.glb','Interiores e torre'],['supercarros.glb','Carros realistas'],['gente.glb','Pessoas realistas'],['aereo.glb','Helicóptero, heliporto e ondas'],['dancas.glb','Danças, beijos e conversas'],['ponte.glb','Pontes de madeira'],['bmw.glb','Concessionária BMW'],['moto.glb','Moto BMW S1000 RR'],['trem.glb','Trem e trilhos'],['pista.glb','Ilha da Pista'],['estatua.glb','Estátua Aurora'],['loft.glb','Loft no Centro (interior)'],['casa.glb','Casa Vermelha']];
+function assetStatus(){const L=[['predios.glb','Prédios realistas'],['extras.glb','Extras (bares, ilhas, danças)'],['texturas.glb','Texturas reais'],['interiores.glb','Interiores e torre'],['supercarros.glb','Carros realistas'],['gente.glb','Pessoas realistas'],['aereo.glb','Helicóptero, heliporto e ondas'],['dancas.glb','Danças, beijos e conversas'],['ponte.glb','Pontes de madeira'],['bmw.glb','Concessionária BMW'],['moto.glb','Moto BMW S1000 RR'],['trem.glb','Trem e trilhos'],['pista.glb','Ilha da Pista'],['estatua.glb','Estátua Aurora'],['loft.glb','Loft no Centro (interior)'],['casa.glb','Casa Vermelha'],['jorge.glb','Seu Jorge (personagem)']];
+  EXPECT['jorge.glb']=1726744;
   EXPECT['loft.glb']=2767592;EXPECT['casa.glb']=3636416;
   EXPECT['bmw.glb']=3623952;EXPECT['moto.glb']=4013488;EXPECT['trem.glb']=2341420;EXPECT['pista.glb']=1638024;EXPECT['estatua.glb']=3684544;EXPECT['ponte.glb']=198408;
   EXPECT['ponte.glb']=198408;
