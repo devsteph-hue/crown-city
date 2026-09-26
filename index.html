@@ -464,7 +464,7 @@ const angDiff=(a,b)=>{let d=b-a;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+
 const IS_MOBILE=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)||('ontouchstart' in window&&innerWidth<900);
 
 /* ---------- versão dos arquivos (evita o navegador usar arquivo velho guardado) ---------- */
-const BUILD='202609260008';const ASSET=f=>f+'?v='+BUILD;
+const BUILD='202609260015';const ASSET=f=>f+'?v='+BUILD;
 /* ---------- save ---------- */
 const SAVE_KEY='crown-city-v1';
 let save={m:0,money:150,side:0,house:0};
@@ -4104,6 +4104,73 @@ const CODIGOS={CROWN50:()=>{addMoney(50000);return'+ $ 50.000'},RICA:()=>{addMon
 function usarCodigo(){const i=document.getElementById('phCodigo');if(!i)return;const k=i.value.trim().toUpperCase().replace(/\s/g,'');const fn=CODIGOS[k];const r=document.getElementById('phCodRes');
   if(fn){const t=fn();sfx('cash');if(r)r.innerHTML='✅ '+t;banner('🔑 Código aceito',t);i.value=''}else if(r)r.innerHTML='❌ Código inválido'}
 function stepContatos(dt){stepVisitas(dt);stepTrabalho()}
+/* ===================== CENAS MOSTRADAS: presente na mão, puxar do carro (sem arremesso), táxi de verdade, saídas e encontros ===================== */
+// ---------- mão direita de uma personagem (realista ou montável) ----------
+function maoDireita(ch){if(!ch||!ch.o)return null;if(ch.mix&&typeof mxPref==='function'){const b=ch.o.getObjectByName(BN(mxPref(ch.o),'RightHand'));if(b)return b}
+  let achou=null;ch.o.traverse(o=>{if(!achou&&o.isBone&&/(hand.*(r|right)|right.*hand|hand_r|handr)/i.test(o.name))achou=o});return achou}
+function naMao(obj,ch,tam){const b=maoDireita(ch);if(!b)return false;if(obj.parent)obj.parent.remove(obj);b.add(obj);const s=new V3();b.getWorldScale(s);const k=1/(s.x||1);
+  obj.scale.setScalar(tam*k);obj.position.set(0,.09*k,.04*k);obj.rotation.set(0,0,0);return true}
+// ---------- presente: você segura, estende e entrega na mão da pessoa ----------
+entregarPresente=function(de,para){if(!EXT.gift||!de||!para)return;const g=EXT.gift.clone(true);g.traverse(m=>{if(m.isMesh)m.castShadow=true});
+  if(!naMao(g,de.c,.8)){g.position.copy(de.pos).add(new V3(0,1.1,0));world.add(g)}play(de.c,'Interact',{once:true,fade:.1});de.actT=1.2;
+  setTimeout(()=>{if(!para.alive){g.parent&&g.parent.remove(g);return}if(!naMao(g,para.c,.8)){para.c.g.add(g);g.position.set(0,1.05,.35)}sfx('click')},900);
+  setTimeout(()=>{let k=1;const enc=()=>{k-=.08;if(k<=0){g.parent&&g.parent.remove(g);return}g.scale.multiplyScalar(.92);requestAnimationFrame(enc)};enc()},3600)};
+// ---------- puxar do carro: a pessoa sai pela porta e cai ali do lado (sem arremesso) ----------
+jackCar=function(c,done){const p=player;const R=carRight(c);const door=c.pos.clone().addScaledVector(R,-(c.t.W/2+.75));door.y=onRoad(door)?0:.18;
+  c.ai=null;c.v=0;p.pos.copy(door);p.yaw=Math.atan2(c.pos.x-door.x,c.pos.z-door.z);p.c.g.rotation.y=p.yaw;p.jacking=true;play(p.c,'Interact',{once:true,fade:.08});sfx('door');
+  const wasCop=c.driver==='cop';
+  setTimeout(()=>{if(!p.alive){p.jacking=false;return}const banco=c.pos.clone().addScaledVector(R,-.35);banco.y=door.y;
+    const d=spawnActor(wasCop?'cop':'civ',banco,wasCop?one('Soldier'):(c.npc||randSpec(CIV)));d.ring=ringOf(clamp(Math.floor(d.pos.x/CELL),0,N-1),clamp(Math.floor(d.pos.z/CELL),0,N-1));d.lane=rnd(1.45,2.05);
+    cleanupDriver&&cleanupDriver(c);d.yaw=p.yaw+Math.PI;d.c.g.rotation.y=d.yaw;
+    // puxada: do banco até a porta, junto da sua mão
+    const fim=door.clone().addScaledVector(R,-.7);let t=0;d.puxado=true;const anda=()=>{t+=1/60;const u=Math.min(1,t/.35);d.pos.lerpVectors(banco,fim,u);d.c.g.position.copy(d.pos);if(u<1)requestAnimationFrame(anda);else{d.puxado=false;knockDown(d,door,.35);
+      setTimeout(()=>{if(d.alive){d.state='flee';d.from=p.pos.clone();d.t=9}},2700)}};anda();
+    sfx('punch');if(wasCop)crime(1.2);else crime(copsNear(30)?1:.35);bubble(d,pick(['Ei! Meu carro!','Socorro! Ladra!','Você é louca?!','Leva, leva, não me machuca!']))},420);
+  setTimeout(()=>{p.jacking=false;if(p.alive)done()},1150)};
+// ---------- táxi de verdade: encosta, você entra, ele anda (câmera atrás), chega e você desce ----------
+let TAXI=null;
+function taxiViagem(destino,aoChegar,passageiro){if(TAXI)return;const r=roadPointAny(player.pos,5,26);if(!r){aoChegar();return}
+  const t=makeCar('taxi',r.pos.clone(),r.yaw);if(!t){aoChegar();return}t.keep=true;t.ai=null;t.driver='taxi';t.v=0;TAXI={c:t,fase:'chega',tt:0,destino,aoChegar,passageiro};
+  // o táxi aparece um pouco atrás e encosta
+  const tras=new V3(Math.sin(r.yaw),0,Math.cos(r.yaw));t.pos.copy(r.pos).addScaledVector(tras,-22);t.g.position.copy(t.pos);banner('🚕 Táxi','Seu táxi está chegando')}
+function stepTaxi(dt){const T=TAXI;if(!T)return;const t=T.c;T.tt+=dt;const f=new V3(Math.sin(t.yaw),0,Math.cos(t.yaw));
+  if(T.fase==='chega'){const v=Math.max(0,11*(1-T.tt/2.2));t.pos.addScaledVector(f,v*dt);t.g.position.copy(t.pos);
+    if(T.tt>2.3){T.fase='embarca';T.tt=0;const porta=t.pos.clone().addScaledVector(carRight(t),-(t.t.W/2+.8));player.pos.copy(porta).setY(.18);player.yaw=Math.atan2(t.pos.x-porta.x,t.pos.z-porta.z);player.c.g.rotation.y=player.yaw;play(player.c,'Interact',{once:true});sfx('door')}}
+  else if(T.fase==='embarca'){if(T.tt>.8){player.c.g.visible=false;player.busy=true;if(T.passageiro&&T.passageiro.c)T.passageiro.c.g.visible=false;T.fase='anda';T.tt=0;sfx('door')}}
+  else if(T.fase==='anda'){t.v=Math.min(16,t.v+dt*6);const np=t.pos.clone().addScaledVector(f,t.v*dt);if(!COLL.some(k=>np.x>k.x0-1&&np.x<k.x1+1&&np.z>k.z0-1&&np.z<k.z1+1&&(k.h||9)>1))t.pos.copy(np);t.g.position.copy(t.pos);player.pos.copy(t.pos);
+    if(T.tt>4.2){T.fase='viaja';T.tt=0;fadeTaxi(true)}}
+  else if(T.fase==='viaja'){if(T.tt>.7){const r=roadPointAny(T.destino,2,22)||{pos:T.destino.clone(),yaw:0};t.pos.copy(r.pos);t.yaw=r.yaw;t.g.position.copy(t.pos);t.g.rotation.y=t.yaw;t.v=0;player.pos.copy(t.pos);T.fase='desce';T.tt=0;fadeTaxi(false)}}
+  else if(T.fase==='desce'){if(T.tt>.6&&!T.desceu){T.desceu=true;const porta=t.pos.clone().addScaledVector(carRight(t),-(t.t.W/2+.8));player.pos.copy(porta).setY(.18);player.c.g.visible=true;player.busy=false;player.yaw=t.yaw;player.c.g.rotation.y=player.yaw;camYaw=t.yaw;sfx('door');
+      if(T.passageiro&&T.passageiro.c){T.passageiro.pos.copy(porta).addScaledVector(new V3(Math.sin(t.yaw),0,Math.cos(t.yaw)),-1.4).setY(.18);T.passageiro.c.g.visible=true;T.passageiro.c.g.position.copy(T.passageiro.pos)}}
+    if(T.tt>1.5){T.fase='vai';T.tt=0;const cb=T.aoChegar;setTimeout(cb,50)}}
+  else if(T.fase==='vai'){t.v=Math.min(14,t.v+dt*6);t.pos.addScaledVector(f,t.v*dt);t.g.position.copy(t.pos);if(T.tt>4){removeCar&&removeCar(t);TAXI=null}}}
+function fadeTaxi(on){let el=document.getElementById('taxiFade');if(!el){el=document.createElement('div');el.id='taxiFade';document.body.appendChild(el)}el.innerHTML='';el.classList.toggle('on',on)}
+function taxiCam(dt){const T=TAXI;if(!T||!['anda','viaja'].includes(T.fase))return false;const t=T.c,f=new V3(Math.sin(t.yaw),0,Math.cos(t.yaw));
+  const alvo=t.pos.clone().addScaledVector(f,-9).add(new V3(0,3.6,0));camera.position.lerp(alvo,Math.min(1,dt*3));camLook.copy(t.pos).addScaledVector(f,4).add(new V3(0,1,0));camera.lookAt(camLook);camPos.copy(camera.position);return true}
+const _updCamCenas=updateCamera;updateCamera=function(dt){if(taxiCam(dt))return;_updCamCenas(dt)};
+// o táxi até o trabalho de um contato agora é mostrado
+taxiAte=function(c){const dest=destinoTrabalho(c);if(!dest)return;const T=TRABALHO[c.id];
+  taxiViagem(dest,()=>{if(T.lugar==='bar'){const b=BARS[0];player.pos.copy(b.pos).setY(.18);barCool=0;HCTX={deco:b.deco,door:b.pos.clone(),bar:b.id};enterHouse();setTimeout(()=>colocarNoTrabalho(c),900)}
+    else if(T.lugar==='clube'){player.pos.copy(CLUB_DOOR.pos).setY(.18);clubCool=0;const useSci=EXT.ready&&INT.scibar;HCTX={deco:useSci?'scibar':'timeroom',door:CLUB_DOOR.pos.clone(),club:true,bar:useSci?'veludo':undefined};enterHouse();setTimeout(()=>colocarNoTrabalho(c),900)}
+    else{if(typeof spawnContacts==='function')spawnContacts();const a=c.actor;if(a){turnTo(a,Math.atan2(player.pos.x-a.pos.x,player.pos.z-a.pos.z),1,1);bubble(a,'Ah, você veio! Tô trabalhando, mas dá pra conversar.')}}})};
+// ---------- saídas e encontros mostrados: vão juntos de táxi e a cena acontece no lugar ----------
+goOut=function(c){const r=relOf(c.id);if(typeof spawnContacts==='function')spawnContacts();const a=c.actor;
+  const lugares=[{k:'bar',nome:'o bar do Seu Jorge',fala:'Um brinde! A gente devia fazer isso mais vezes.'},{k:'clube',nome:'a pista do Clube Veludo',fala:'Essa música é a nossa! Vem dançar!'},{k:'pier',nome:'o fim do píer, no pôr do sol',fala:'Olha esse céu… Crown City tem dessas coisas.'}];
+  const L=pick(lugares);let dest=L.k==='bar'?(BARS[0]&&BARS[0].pos):L.k==='clube'?(setupClubDoor(),CLUB_DOOR&&CLUB_DOOR.pos):new V3(SEA_X-2,0,PIERS[0]);if(!dest)dest=player.pos.clone();
+  banner('Saída com '+c.name,'Vocês vão para '+L.nome);if(a){a.vindo=null;a.pos.copy(player.pos).add(new V3(1.4,0,0));a.c.g.position.copy(a.pos)}
+  const fim=()=>{r.dates=(r.dates||0)+1;relGain(c,r.love?10:18)};
+  taxiViagem(dest.clone(),()=>{
+    if(L.k==='pier'){// pôr do sol no fim do píer, lado a lado
+      dayT=.755;stepDay(0);const px=SEA_X+PIER_L-3,pz=PIERS[0];player.pos.set(px,.18,pz-.7);if(a){a.pos.set(px,.18,pz+.7);a.c.g.position.copy(a.pos);a.yaw=Math.PI/2;a.c.g.rotation.y=a.yaw}player.yaw=Math.PI/2;player.c.g.rotation.y=player.yaw;camYaw=-Math.PI/2;
+      CENA_CONV=a?{a,t:14,lado:1}:null;setTimeout(()=>contactTalk(c,[L2(c.name,L.fala),L2('Você',pick(['Foi perfeito.','Obrigada pela companhia.','Repetimos semana que vem?']))],()=>{if(a)flutuar(a,'💗','#ff8fc4');fim()}),1200)}
+    else{const b=L.k==='bar'?BARS[0]:null;if(b){player.pos.copy(b.pos).setY(.18);barCool=0;HCTX={deco:b.deco,door:b.pos.clone(),bar:b.id}}else{player.pos.copy(CLUB_DOOR.pos).setY(.18);clubCool=0;const useSci=EXT.ready&&INT.scibar;HCTX={deco:useSci?'scibar':'timeroom',door:CLUB_DOOR.pos.clone(),club:true,bar:useSci?'veludo':undefined}}enterHouse();
+      setTimeout(()=>{// a pessoa entra junto e fica ao seu lado
+        const p2=player.pos.clone().add(new V3(1.3,0,.4));p2.y=HO.y;if(TRAB_NPC&&TRAB_NPC.a)removeActor(TRAB_NPC.a);const na=spawnActor('boss',p2,safeSpec(c.spec()));na.contact=c.id;na.ally=true;na.state='idle';TRAB_NPC={a:na,c,antigo:c.actor};c.actor=na;
+        turnTo(na,Math.atan2(player.pos.x-na.pos.x,player.pos.z-na.pos.z),1,1);CENA_CONV={a:na,t:12,lado:null};
+        if(L.k==='clube'){if(player.c.mix)playerDance(pick(Object.keys(EXT.dances)));if(na.c.mix)startDance(na.c,pick(Object.keys(EXT.dances)))}
+        else{play(player.c,'Consume',{once:true});play(na.c,'Consume',{once:true})}
+        setTimeout(()=>contactTalk(c,[L2(c.name,L.fala),L2('Você',pick(['Foi perfeito.','Obrigada pela companhia.','Repetimos semana que vem?']))],()=>{flutuar(na,'💗','#ff8fc4');fim()}),1600)},1000)}},a)};
+function stepCenas(dt){stepTaxi(dt)}
 const pedal={gas:false,brake:false,left:false,right:false,steer:0};
 /* ===================== CONTROLES ===================== */
 const keys={};
@@ -4218,7 +4285,7 @@ function loop(t){requestAnimationFrame(loop);const dt=Math.min(.05,(t-last)/1000
   if(atkHeld&&player.gun&&WEAP[player.weapon].auto)doAttack();
   updatePlayer(dt);const P=player.pos;
   for(const a of ACTORS){if(a===player)continue;const d=a.pos.distanceTo(P);if(d>70&&frame%3)continue;updateActor(a,d>70?dt*3:dt,NOW)}
-  stepDay(dt);stepFolego(dt);stepBalada(dt);stepAereo(dt);stepConversa(dt);stepTeclas(dt);stepAutoTiro(dt);stepNovos(dt);stepContatos(dt);stepPontes(dt);stepHud();if(!window._cullOk&&typeof fixInstCull==='function'&&NOW>2){window._cullOk=1;fixInstCull()}if(NOW>6&&window._cullOk===1){window._cullOk=2;fixInstCull()}stepTalk(dt);stepRain(dt);stepAllies(dt);stepBubbles(dt);stepServices(dt);stepRadio(dt);stepSea(dt);stepCrowns(dt);stepBeauty(dt);stepBoatRiders(dt);stepTyping(dt);stepContacts(dt);stepEvents(dt);stepAim(dt);stepShopFront(dt);stepLook(dt);stepPicks(dt);autosave(dt);stepDrivers(dt);stepVest();stepRadio2();stepSkids(dt);stepAssist(dt);stepHolster();stepProps(dt);stepChests(dt);stepWheel();stepPie();stepBars(dt);stepPlayerDance();stepJump(dt);stepClubDoor(dt);stepClub(dt);separate();updateCars(dt,NOW);stepDebris(dt);stepFX(dt);stepCash(dt);stepMolotov(dt);checkShop(dt);checkHouseDoor(dt);checkActivities(dt);checkHints(dt);if(inHouse)spots.forEach(s=>s.m.material.opacity=.45+.35*Math.sin(NOW*4));managePolice(dt);checkMission(dt);
+  stepDay(dt);stepFolego(dt);stepBalada(dt);stepAereo(dt);stepConversa(dt);stepTeclas(dt);stepAutoTiro(dt);stepNovos(dt);stepContatos(dt);stepCenas(dt);stepPontes(dt);stepHud();if(!window._cullOk&&typeof fixInstCull==='function'&&NOW>2){window._cullOk=1;fixInstCull()}if(NOW>6&&window._cullOk===1){window._cullOk=2;fixInstCull()}stepTalk(dt);stepRain(dt);stepAllies(dt);stepBubbles(dt);stepServices(dt);stepRadio(dt);stepSea(dt);stepCrowns(dt);stepBeauty(dt);stepBoatRiders(dt);stepTyping(dt);stepContacts(dt);stepEvents(dt);stepAim(dt);stepShopFront(dt);stepLook(dt);stepPicks(dt);autosave(dt);stepDrivers(dt);stepVest();stepRadio2();stepSkids(dt);stepAssist(dt);stepHolster();stepProps(dt);stepChests(dt);stepWheel();stepPie();stepBars(dt);stepPlayerDance();stepJump(dt);stepClubDoor(dt);stepClub(dt);separate();updateCars(dt,NOW);stepDebris(dt);stepFX(dt);stepCash(dt);stepMolotov(dt);checkShop(dt);checkHouseDoor(dt);checkActivities(dt);checkHints(dt);if(inHouse)spots.forEach(s=>s.m.material.opacity=.45+.35*Math.sin(NOW*4));managePolice(dt);checkMission(dt);
   keepT-=dt;if(keepT<=0){keepT=2;checkGarage();keepRaceCar();keepBoats()}
   popT-=dt;if(popT<=0){popT=.5;if(!inHouse){managePop();manageParked()}accrue();}
   updateCamera(dt);updHUD(dt);if(frame%3===0)drawMinimap();if(frame%10===0)updButtons();loopSounds();
