@@ -479,7 +479,7 @@ const angDiff=(a,b)=>{let d=b-a;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+
 const IS_MOBILE=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)||('ontouchstart' in window&&innerWidth<900);
 
 /* ---------- versão dos arquivos (evita o navegador usar arquivo velho guardado) ---------- */
-const BUILD='202609260109';const ASSET=f=>f+'?v='+BUILD;
+const BUILD='202609260122';const ASSET=f=>f+'?v='+BUILD;
 /* ---------- save ---------- */
 const SAVE_KEY='crown-city-v1';
 let save={m:0,money:150,side:0,house:0};
@@ -2708,9 +2708,9 @@ const CONTACTS=[
   lines:['Ei! Tô montando um set novo, quer ouvir depois?','A cidade tem um som, sabia? Buzina, sirene, gente rindo.','Você tem cara de quem gosta de música alta.','Me chama pra sair qualquer dia, eu topo.']},
  {id:'rafa',name:'Rafa',role:'mecânico',spec:()=>({mix:'ch28'}),blk:[4,1],side:1,t:.5,voice:125,romance:true,perk:'Conserta o seu carro na hora, de graça',
   lines:['Esse carro tá fazendo um barulho estranho… ah, não, é o motor mesmo.','Se precisar de um carro rápido, fala comigo.','Óleo, graxa e café. Minha vida.','Você dirige igual doida. Gosto disso.']},
- {id:'lia',name:'Lia',role:'fotógrafa',spec:()=>({head:'Casual',body:'Adventurer',legs:'Casual',feet:'Casual'}),blk:[2,1],side:0,t:.7,voice:215,romance:false,perk:'Vende suas fotos para o jornal ($ 300)',
+ {id:'lia',name:'Lia',role:'fotógrafa',spec:()=>({head:'Casual',body:'Adventurer',legs:'Casual',feet:'Casual'}),blk:[2,1],side:0,t:.7,voice:215,romance:true,perk:'Vende suas fotos para o jornal ($ 300)',
   lines:['Fica paradinha… pronto, ficou ótima!','Crown City é linda quando o sol está baixo.','Fotografei uma perseguição ontem. Era você, né?','Um dia vou fazer uma exposição da cidade.']},
- {id:'bruno',name:'Bruno',role:'skatista',spec:()=>({head:'Punk',body:'Casual',legs:'Worker',feet:'Worker'}),blk:[2,3],side:2,t:.4,voice:175,romance:false,perk:'Vira seu parceiro de briga',
+ {id:'bruno',name:'Bruno',role:'skatista',spec:()=>({head:'Punk',body:'Casual',legs:'Worker',feet:'Worker'}),blk:[2,3],side:2,t:.4,voice:175,romance:true,perk:'Vira seu parceiro de briga',
   lines:['E aí! Viu aquela manobra? Não viu? Ainda bem.','O parque é meu escritório.','Se tiver briga, me chama. Eu corro rápido.','Coroas são a melhor gangue. Não conta pros Serpentes que eu disse isso.']},
 ];
 const LEVELS=[[0,'Desconhecido'],[20,'Conhecido'],[45,'Amigo'],[75,'Melhor amigo']];
@@ -3321,7 +3321,7 @@ let propCool=0;
 function stepProps(dt){propCool-=dt;for(const pr of PROPS)if(pr.ring)pr.ring.material.opacity=.55+Math.sin(NOW*3)*.3;if(propCool>0||pcar()||inHouse||state!=='play')return;
   for(const pr of PROPS){if(!pr.pos||player.pos.distanceTo(pr.pos)>1.2)continue;propCool=3;const own=(save.props||[]).includes(pr.id);
     openPanel(pr.name,own?'Seu imóvel':'Imóvel à venda',[{t:own?'Entrar':'Comprar '+pr.name,s:own?'Descanse, troque de roupa e salve o jogo.':'Interior: '+((DECOS[pr.deco]||{}).name||'')+'. Vira mais um lugar para dormir e salvar.',b:own?'Entrar':'$ '+pr.price.toLocaleString('pt-BR'),price:own?0:pr.price,
-      fn:()=>{if(!own){save.props=[...(save.props||[]),pr.id];persist();banner('Imóvel comprado',pr.name)}closePanel();HCTX={deco:pr.deco,door:pr.pos.clone()};enterHouse()}},{t:'Sair',s:'',b:'Fechar',price:0,fn:()=>closePanel()}]);return}}
+      fn:()=>{if(!own){save.props=[...(save.props||[]),pr.id];persist();banner('Imóvel comprado',pr.name)}closePanel();HCTX={deco:pr.deco,door:pr.pos.clone(),prop:pr.id};enterHouse()}},{t:'Sair',s:'',b:'Fechar',price:0,fn:()=>closePanel()}]);return}}
 /* ===================== MODELOS NOVOS: TEMPLO, GALPÃO, ELEVADOR, BAÚS, VOLANTE, IMÓVEIS ===================== */
 Object.assign(DECOS,{bedroom2:{id:'bedroom2',name:'Suíte aconchego',s:1,floor:-1.31,bed:[-1,-.7],lvl:2},timeroom:{id:'timeroom',name:'Esconderijo do relógio',s:1,floor:-.1,bed:[1,1],ceil:2.6,lvl:3}});
 PROPS.push({id:'suite2',name:'Suíte Aconchego',deco:'bedroom2',price:16000},{id:'relogio',name:'Esconderijo do Relógio',deco:'timeroom',price:28000});
@@ -3487,9 +3487,9 @@ function barInside(){// gente dentro do bar/clube
     if(!p)continue;const a=spawnDancer(p,ids[i%ids.length],keys[i%keys.length],Math.random()*6.28);if(a){a.pos.y=HO.y;BAR_NPCS.push(a)}}}
 /* ---------- ilhas no mar, serra no horizonte, bairro de torres e árvores ---------- */
 // afunda a ilha até a borda do terreno ficar um pouco abaixo do mar (antes a praia ficava 1-2 m acima, como uma laje flutuando)
-function assentarIlha(o){o.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(o),c=b.getCenter(new V3()),meshes=[];o.traverse(m=>{if(m.isMesh)meshes.push(m)});const R=new THREE.Raycaster(),hs=[];
+function assentarIlha(o,q=.35){o.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(o),c=b.getCenter(new V3()),meshes=[];o.traverse(m=>{if(m.isMesh)meshes.push(m)});const R=new THREE.Raycaster(),hs=[];
   for(let a=0;a<64;a++){const t=a/64*6.283;for(let f=.99;f>.3;f-=.015){const q=new V3(c.x+Math.cos(t)*(b.max.x-b.min.x)/2*f,0,c.z+Math.sin(t)*(b.max.z-b.min.z)/2*f);R.set(new V3(q.x,b.max.y+5,q.z),new V3(0,-1,0));const h=R.intersectObjects(meshes,false);if(h.length){hs.push(h[0].point.y);break}}}
-  if(hs.length<8)return;hs.sort((a,b)=>a-b);const borda=hs[Math.floor(hs.length*.35)];o.position.y-=borda+.35;o.updateMatrixWorld(true)}
+  if(hs.length<8)return;hs.sort((a,b)=>a-b);const borda=hs[Math.floor(hs.length*q)];o.position.y-=borda+.35;o.updateMatrixWorld(true)}
 function placeExtrasWorld(){if(placeExtrasWorld.done)return;placeExtrasWorld.done=true;barDecos();setupBars();const add=(k,pos,size,rot)=>{const s=EXT.M[k];if(!s)return null;const D=EXT.D[k];const o=s.clone(true);const sc=size/Math.max(D.x,D.z);o.scale.setScalar(sc);o.position.copy(pos);o.rotation.y=rot||0;world.add(o);return {o,sc,D}};
   // serra atrás da cidade (oeste e norte), afundada: a borda da frente do terreno é irregular e ficava flutuando
   const SERRA_Y=-22;
@@ -3504,7 +3504,7 @@ function placeExtrasWorld(){if(placeExtrasWorld.done)return;placeExtrasWorld.don
   if(SPECIAL.temple){const tc=blockC(...SPECIAL.temple);for(const[dx,dz]of[[-14,-14],[14,14]])add('maple',tc.clone().add(new V3(dx,.18,dz)),8,1)}
   // ilhas
   const I1=add('tropical',new V3(SEA_X+320,0,40),80,0),I2=add('danbo',new V3(SEA_X+300,0,SIZE*.72),70,.5);
-  for(const[I,land,nm]of[[I1,new V3(-30,0,0),'Ilha Tropical'],[I2,new V3(-26,0,6),'Rochedo do Farol']]){if(!I)continue;assentarIlha(I.o);I.o.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(I.o);const meshes=[];I.o.traverse(m=>{if(m.isMesh)meshes.push(m)});
+  for(const[I,land,nm]of[[I1,new V3(-30,0,0),'Ilha Tropical'],[I2,new V3(-26,0,6),'Rochedo do Farol']]){if(!I)continue;assentarIlha(I.o,nm==='Rochedo do Farol'?.8:.35);/* rochedo: penhasco irregular, afunda mais */I.o.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(I.o);const meshes=[];I.o.traverse(m=>{if(m.isMesh)meshes.push(m)});
     const isl={name:nm,box:b,meshes,land:null};ISLANDS.push(isl);const ctr=b.getCenter(new V3());
     // ponto de praia mais próximo da cidade: anda do centro para o oeste enquanto ainda há terreno
     let last=null;for(let d=0;d<(b.max.x-b.min.x)/2;d+=1){const q=new V3(ctr.x-d,0,ctr.z);const y=islandY(q);if(y!==null)last=q.setY(y);else if(last)break}isl.land=last||ctr.clone();const r=Math.min(b.max.x-b.min.x,b.max.z-b.min.z)*.36;const cx=(b.min.x+b.max.x)/2,cz=(b.min.z+b.max.z)/2;BOATCOLL.push({x0:cx-r,x1:cx+r,z0:cz-r,z1:cz+r})}
@@ -3516,7 +3516,7 @@ let PARTY=[];function stepParty(){const isl=ISLANDS[0];if(!isl||!player)return;c
   else if(!near&&PARTY.length){for(const a of PARTY)removeActor(a);PARTY=[]}}
 const _ray=new THREE.Raycaster();
 function islandAt(p){for(const I of ISLANDS)if(p.x>I.box.min.x&&p.x<I.box.max.x&&p.z>I.box.min.z&&p.z<I.box.max.z)return I;return null}
-function islandY(p){const I=islandAt(p);if(!I)return null;_ray.set(new V3(p.x,I.box.max.y+5,p.z),new V3(0,-1,0));const h=_ray.intersectObjects(I.meshes,false);return h.length&&h[0].point.y>.3?h[0].point.y:null}
+function islandY(p){const I=islandAt(p);if(!I)return null;_ray.set(new V3(p.x,I.box.max.y+5,p.z),new V3(0,-1,0));const h=_ray.intersectObjects(I.meshes,false);return h.length&&h[0].point.y>.06?h[0].point.y:null}/* ilhas assentadas no mar: praia logo acima da água */
 /* ===================== CONVERSAS APROFUNDADAS POR NÍVEL DE AMIZADE ===================== */
 // cada cena: [falas do morador, [[sua resposta, reação, efeito na amizade], ...], presente opcional]
 const DEEP={
@@ -3902,13 +3902,16 @@ addEventListener('keydown',e=>{if(state!=='play'||e.repeat&&e.key.toLowerCase()!
   if(k==='f'&&!pcar()){e.stopImmediatePropagation();if(typeof openTalk==='function')openTalk()}
   if(k==='k'){TECLAS_EXTRA.k=true;doAttack()}},{capture:true});
 addEventListener('keyup',e=>{if(e.key.toLowerCase()==='k')TECLAS_EXTRA.k=false});
-// 3) tiro automático: armada e sem mirar, quem te ataca leva tiro; só o CORPO vira, a câmera continua livre
-let AUTO_T=0;
-function stepAutoTiro(dt){const p=player;AUTO_T-=dt;if(TECLAS_EXTRA.k&&p&&p.gun)doAttack();
-  if(!p||!p.alive||!p.gun||aiming||pcar()||state!=='play'||p.busy||AUTO_T>0)return;const w=WEAP[p.weapon];if(!w||p.fireT>0)return;
-  let alvo=null,bd=1e9;for(const a of ACTORS){if(a===p||!a.alive||a.homie||a.down)continue;const agressor=(a.kind==='gang'||a.kind==='cop')&&a.aggro||a.brawl||(a.lastHitPlayer&&NOW-a.lastHitPlayer<6);
-    if(!agressor)continue;const d=a.pos.distanceTo(p.pos);if(d>w.range*.9||d>=bd||segBlocked(p.pos,a.pos))continue;bd=d;alvo=a}
-  if(!alvo)return;p.yaw=Math.atan2(alvo.pos.x-p.pos.x,alvo.pos.z-p.pos.z);p.c.g.rotation.y=p.yaw;doAttack();AUTO_T=Math.max(.18,w.rate*1.15)}
+// 3) mira automática (sem atirar sozinha): quem está te atacando fica marcado e, quando VOCÊ atira, o tiro vai nele.
+//    Só o corpo vira na hora do tiro; a câmera continua livre. Sem ninguém te atacando, a mira é a normal.
+let AUTO_ALVO=null,AUTO_MARCA=null;
+function stepAutoTiro(dt){const p=player;if(TECLAS_EXTRA.k&&p&&p.gun)doAttack();AUTO_ALVO=null;
+  if(p&&p.alive&&p.gun&&!pcar()&&state==='play'){const w=WEAP[p.weapon];let bd=1e9;
+    for(const a of ACTORS){if(a===p||!a.alive||a.homie||a.down)continue;const agressor=(a.kind==='gang'||a.kind==='cop')&&a.aggro||a.brawl||(a.lastHitPlayer&&NOW-a.lastHitPlayer<6);
+      if(!agressor)continue;const d=a.pos.distanceTo(p.pos);if(!w||d>w.range*.95||d>=bd||segBlocked(p.pos,a.pos))continue;bd=d;AUTO_ALVO=a}}
+  if(!AUTO_MARCA){AUTO_MARCA=new THREE.Mesh(new THREE.RingGeometry(.28,.36,28),new THREE.MeshBasicMaterial({color:lin('#ff3b5c'),transparent:true,opacity:.9,depthTest:false,side:THREE.DoubleSide}));AUTO_MARCA.renderOrder=999;world.add(AUTO_MARCA)}
+  AUTO_MARCA.visible=!!(AUTO_ALVO&&!aiming);if(AUTO_MARCA.visible){AUTO_MARCA.position.copy(AUTO_ALVO.pos).add(new V3(0,2.25,0));AUTO_MARCA.quaternion.copy(camera.quaternion);AUTO_MARCA.scale.setScalar(1+Math.sin(NOW*8)*.08)}}
+const _doAttackMira=doAttack;doAttack=function(){const p=player;if(p&&p.gun&&!aiming&&!pcar()&&AUTO_ALVO&&AUTO_ALVO.alive){p.yaw=Math.atan2(AUTO_ALVO.pos.x-p.pos.x,AUTO_ALVO.pos.z-p.pos.z);p.c.g.rotation.y=p.yaw}return _doAttackMira.apply(this,arguments)};
 // 4) heliporto e destroços do avião sempre no mapa (antes só apareciam depois de o pacote aéreo carregar)
 if(typeof AERO_BLIPS!=='undefined'&&!AERO_BLIPS.length){AERO_BLIPS.push({p:new V3(18,0,SIZE+42),k:'heli',n:'Heliporto'},{p:new V3(20,0,SIZE+116),k:'destrocos',n:'Destroços do avião'})}
 // 5) namoro: próximo passo na conversa com o contato
@@ -4079,7 +4082,7 @@ function nvCasa(){if(CASA_OK||!NV.M.vermelha)return;CASA_OK=true;const o=nvClone
   if(!PROPS.some(p=>p.id==='vermelha'))PROPS.push(pr)}
 function nvMontar(){nvChao();nvCasa();nvShow();nvEstatua();nvTrem();nvPista()}
 function stepNovos(dt){if(typeof EXT==='undefined'||!(EXT.ready||EXT.failed||NOW>25))return;const p=player;if(!p)return;const sul=p.pos.z>SIZE-80,mar=p.pos.x>SEA_X-40;
-  nvChao();nvCarregar('trem.glb');if(!IS_MOBILE||sul){nvCarregar('casa.glb');nvCarregar('bmw.glb');nvCarregar('moto.glb');nvCarregar('estatua.glb')}if(!IS_MOBILE||mar||sul)nvCarregar('pista.glb');
+  nvChao();nvCarregar('trem.glb');if(!IS_MOBILE||sul||mar)nvCarregar('casa.glb');if(!IS_MOBILE||sul){nvCarregar('bmw.glb');nvCarregar('moto.glb');nvCarregar('estatua.glb')}if(!IS_MOBILE||mar||sul)nvCarregar('pista.glb');
   stepShow(dt);stepEstatua(dt);stepTrem(dt);stepPista(dt);
   if(tremPerto()){const b=$('bCar');if(b)b.classList.remove('dim')}}
 /* ===================== CONTATOS DE VERDADE: horário de trabalho, táxi até o trabalho (lá dentro) e visita que vem mesmo =====================
@@ -4259,6 +4262,46 @@ const _phoneInviteCasa=phoneInvite;phoneInvite=function(id){_phoneInviteCasa.app
 const _exitHouseCasa=exitHouse;exitHouse=function(){const junto=CONTACTS.map(c=>c.actor).filter(a=>a&&a.alive&&inHouse&&a.pos.distanceTo(player.pos)<30);_exitHouseCasa.apply(this,arguments);
   setTimeout(()=>{for(const a of junto){a.vindo=null;a.dentroCasa=false;a.pos.copy(player.pos).add(new V3(1.4,0,.6)).setY(.18);a.c.g.position.copy(a.pos);a.visitou=NOW}},900)};
 function stepCasa(){botaoSairCasa();const t=document.getElementById('teclas');if(t&&inHouse&&!t.innerHTML.includes('Sair de casa'))t.insertAdjacentHTML('afterbegin','<span><kbd>Z</kbd>Sair de casa</span>')}
+/* ===================== VIDAS DUPLAS: casas nas ilhas, morar juntos (cada parceiro num lugar) e flagra ===================== */
+const ILHA_CASAS=[{ilha:'Ilha Tropical',id:'ilha_tropical',name:'Casa na Ilha Tropical',deco:'tropical',price:40000},{ilha:'Rochedo do Farol',id:'ilha_farol',name:'Casa do Farol',deco:'mirror',price:28000},{ilha:'Ilha da Pista',id:'ilha_pista',name:'Cabana da Ilha da Pista',deco:'minimal',price:22000}];
+function nomeImovel(id){if(id==='casa')return'sua casa';const p=PROPS.find(p=>p.id===id);return p?p.name:id}
+// ---------- casa em cada ilha (o modelo da casa vermelha, menor), com porta para comprar e entrar ----------
+function casasNasIlhas(){if(!NV.M.vermelha||typeof ISLANDS==='undefined')return;for(const C of ILHA_CASAS){if(C.feita)continue;const I=ISLANDS.find(i=>i.name===C.ilha);if(!I||!I.land)continue;
+    const ctr=I.box.getCenter(new V3());const dir=new V3(ctr.x-I.land.x,0,ctr.z-I.land.z).normalize();let p=null;for(const d of[16,12,20,9,24]){const q=I.land.clone().addScaledVector(dir,d);const y=islandY(q);if(y!==null&&y>.15){p=q.setY(y);break}}if(!p)continue;
+    C.feita=true;const o=NV.M.vermelha.clone(true);o.scale.multiplyScalar(.7);o.position.copy(p).setY(p.y-.1);o.rotation.y=Math.atan2(-dir.x,-dir.z);world.add(o);o.traverse(m=>{if(m.isMesh){m.castShadow=true;m.receiveShadow=true}});
+    const frente=p.clone().addScaledVector(dir,-5.4);frente.y=(islandY(frente)??p.y)+.02;const pr={id:C.id,name:C.name,deco:C.deco,price:C.price,pos:frente};
+    const ring=new THREE.Mesh(new THREE.RingGeometry(.55,.75,32),new THREE.MeshBasicMaterial({color:lin('#7db7ff'),transparent:true,opacity:.85,side:THREE.DoubleSide,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.copy(frente).add(new V3(0,.08,0));world.add(ring);pr.ring=ring;
+    if(!PROPS.some(x=>x.id===C.id))PROPS.push(pr);NOVOS_BLIPS.push({p:p.clone(),k:'casav',n:C.name});MAPIMG=null}}
+// a porta das casas nas ilhas fica no terreno da ilha (o anel precisa aceitar a altura do terreno)
+const _stepPropsV=stepProps;stepProps=function(dt){for(const pr of PROPS)if(pr.id.startsWith('ilha_')&&pr.pos&&player.pos.distanceTo(pr.pos)<1.6&&Math.abs(player.pos.y-pr.pos.y)<1.2){const y=pr.pos.y;pr.pos.y=player.pos.y;_stepPropsV(dt);pr.pos.y=y;return}_stepPropsV(dt)};
+// ---------- morar juntos ----------
+function lares(){return save.lares||(save.lares={})}
+function moradorDe(propId){const L=lares();return CONTACTS.find(c=>L[c.id]===propId&&relOf(c.id).love)}
+function morarJuntos(c){const r=relOf(c.id);const L=lares();const meus=['casa',...(save.props||[])];const opc=meus.map(id=>{const outro=moradorDe(id);return{id,outro:outro&&outro!==c?outro:null}});
+  openPanel('🏠 Morar juntos com '+c.name,r.v<90?'Precisa de mais intimidade (90)':'Escolha onde '+c.name+' vai morar. Cada parceiro num lugar!',opc.map(o=>({t:nomeImovel(o.id)+(L[c.id]===o.id?' (atual)':''),s:o.outro?'Já mora '+o.outro.name+' aqui — vai dar flagra!':'Livre',b:o.outro?'Ocupado':'Morar',price:0,dis:r.v<90||!!o.outro,
+    fn:()=>{closePanel();L[c.id]=o.id;persist();contactTalk(c,[L2('Você','E se a gente morasse junto? '+nomeImovel(o.id)+' é perfeito pra nós.'),L2(c.name,pick(['Sério?! Eu topo! Já vou levar minhas coisas.','Achei que você nunca ia pedir. Sim!','Morar com você? Claro que sim!']))],()=>{relGain(c,8);banner('🏠 '+c.name+' mora em '+nomeImovel(o.id),'Visite para manter a relação — e cuidado para não ser pega!')})}})).concat([{t:'Deixar para depois',s:'',b:'Ok',price:0,fn:()=>closePanel()}]))}
+// ---------- em casa: o parceiro que mora ali está lá dentro ----------
+let LAR_NPC=null;
+const _enterHouseV=enterHouse;enterHouse=function(){_enterHouseV.apply(this,arguments);const propId=(HCTX&&HCTX.prop)||(!HCTX?'casa':null);if(!propId)return;const c=moradorDe(propId);if(!c)return;
+  setTimeout(()=>{if(!inHouse)return;const s=(spots||[]).find(s=>s.id==='cama')||(spots||[])[1];const p=(s?s.p.clone():player.pos.clone()).add(new V3(1.2,0,.4));p.y=HO.y;
+    if(LAR_NPC&&LAR_NPC.a)removeActor(LAR_NPC.a);const a=spawnActor('boss',p,safeSpec(c.spec()));a.contact=c.id;a.ally=true;a.state='idle';LAR_NPC={a,c,antigo:c.actor};c.actor=a;a.visitou=NOW;
+    turnTo(a,Math.atan2(player.pos.x-a.pos.x,player.pos.z-a.pos.z),1,1);bubble(a,pick(['Oi, amor! Que saudade.','Chegou! Tava te esperando.','Finalmente em casa, hein?']));relOf(c.id).visita=dayNum()},1000)};
+function stepLar(){if(LAR_NPC&&!inHouse){removeActor(LAR_NPC.a);LAR_NPC.c.actor=LAR_NPC.antigo&&LAR_NPC.antigo.alive?LAR_NPC.antigo:null;LAR_NPC=null}}
+// ---------- flagra: romance com um parceiro perto de outro ----------
+function flagra(c){const outros=CONTACTS.filter(o=>o!==c&&relOf(o.id).love&&o.actor&&o.actor.alive&&o.actor.pos.distanceTo(player.pos)<45);if(!outros.length)return;
+  for(const o of outros){const r=relOf(o.id);const a=o.actor;setTimeout(()=>{turnTo(a,Math.atan2(player.pos.x-a.pos.x,player.pos.z-a.pos.z),1,1);if(typeof playAct==='function')playAct(a.c,'brava');
+      bubble(a,pick(['O QUÊ?! Quem é '+c.name+'?!','Eu tô vendo isso mesmo?!','Então é assim, né?! Traidora!']));flutuar&&flutuar(a,'💔😡','#ff6b6b');relGain(o,-35);
+      if(relOf(o.id).v<45&&r.love){r.love=false;if(lares()[o.id]){delete lares()[o.id]}persist();setTimeout(()=>banner('💔 '+o.name+' terminou com você','Te pegou com '+c.name),1800)}
+      else banner('😱 Flagra!',o.name+' viu você com '+c.name)},900)}}
+// o flagra vale para beijo, oba-oba, flerte e saídas
+const _beijarV=beijar;beijar=function(c){_beijarV.apply(this,arguments);flagra(c)};
+const _obaV=obaOba;obaOba=function(c){_obaV.apply(this,arguments);flagra(c)};
+const _goOutV=goOut;goOut=function(c){_goOutV.apply(this,arguments);setTimeout(()=>flagra(c),9000)};
+// ---------- opção "Morar juntos" no menu do contato e onde a pessoa mora ----------
+const _openContactV=openContact;openContact=function(c){const _op=openPanel;openPanel=function(t,sub,rows){openPanel=_op;const r=relOf(c.id);
+    if(r.love){const i=rows.findIndex(x=>/Pedir ajuda/.test(x.t));const lar=lares()[c.id];rows.splice(i<0?rows.length:i,0,{t:'Morar juntos 🏠',s:lar?'Mora em '+nomeImovel(lar)+'. Trocar de lugar?':(r.v<90?'Precisa de mais intimidade (90).':'Convencer '+c.name+' a morar num dos seus imóveis.'),b:'🏠',price:0,dis:r.v<90,fn:()=>{closePanel();morarJuntos(c)}})}
+    return _op.call(this,t,sub,rows)};try{_openContactV.apply(this,arguments)}finally{openPanel=_op}};
+function stepVidas(){casasNasIlhas();stepLar()}
 const pedal={gas:false,brake:false,left:false,right:false,steer:0};
 /* ===================== CONTROLES ===================== */
 const keys={};
@@ -4374,7 +4417,7 @@ function loop(t){requestAnimationFrame(loop);const dt=Math.min(.05,(t-last)/1000
   if(atkHeld&&player.gun&&WEAP[player.weapon].auto)doAttack();
   updatePlayer(dt);const P=player.pos;
   for(const a of ACTORS){if(a===player)continue;const d=a.pos.distanceTo(P);if(d>70&&frame%3)continue;updateActor(a,d>70?dt*3:dt,NOW)}
-  stepDay(dt);stepFolego(dt);stepBalada(dt);stepAereo(dt);stepConversa(dt);stepTeclas(dt);stepAutoTiro(dt);stepNovos(dt);stepContatos(dt);stepCenas(dt);stepCasa();stepPontes(dt);stepHud();if(!window._cullOk&&typeof fixInstCull==='function'&&NOW>2){window._cullOk=1;fixInstCull()}if(NOW>6&&window._cullOk===1){window._cullOk=2;fixInstCull()}stepTalk(dt);stepRain(dt);stepAllies(dt);stepBubbles(dt);stepServices(dt);stepRadio(dt);stepSea(dt);stepCrowns(dt);stepBeauty(dt);stepBoatRiders(dt);stepTyping(dt);stepContacts(dt);stepEvents(dt);stepAim(dt);stepShopFront(dt);stepLook(dt);stepPicks(dt);autosave(dt);stepDrivers(dt);stepVest();stepRadio2();stepSkids(dt);stepAssist(dt);stepHolster();stepProps(dt);stepChests(dt);stepWheel();stepPie();stepBars(dt);stepPlayerDance();stepJump(dt);stepClubDoor(dt);stepClub(dt);separate();updateCars(dt,NOW);stepDebris(dt);stepFX(dt);stepCash(dt);stepMolotov(dt);checkShop(dt);checkHouseDoor(dt);checkActivities(dt);checkHints(dt);if(inHouse)spots.forEach(s=>s.m.material.opacity=.45+.35*Math.sin(NOW*4));managePolice(dt);checkMission(dt);
+  stepDay(dt);stepFolego(dt);stepBalada(dt);stepAereo(dt);stepConversa(dt);stepTeclas(dt);stepAutoTiro(dt);stepNovos(dt);stepContatos(dt);stepCenas(dt);stepCasa();stepVidas();stepPontes(dt);stepHud();if(!window._cullOk&&typeof fixInstCull==='function'&&NOW>2){window._cullOk=1;fixInstCull()}if(NOW>6&&window._cullOk===1){window._cullOk=2;fixInstCull()}stepTalk(dt);stepRain(dt);stepAllies(dt);stepBubbles(dt);stepServices(dt);stepRadio(dt);stepSea(dt);stepCrowns(dt);stepBeauty(dt);stepBoatRiders(dt);stepTyping(dt);stepContacts(dt);stepEvents(dt);stepAim(dt);stepShopFront(dt);stepLook(dt);stepPicks(dt);autosave(dt);stepDrivers(dt);stepVest();stepRadio2();stepSkids(dt);stepAssist(dt);stepHolster();stepProps(dt);stepChests(dt);stepWheel();stepPie();stepBars(dt);stepPlayerDance();stepJump(dt);stepClubDoor(dt);stepClub(dt);separate();updateCars(dt,NOW);stepDebris(dt);stepFX(dt);stepCash(dt);stepMolotov(dt);checkShop(dt);checkHouseDoor(dt);checkActivities(dt);checkHints(dt);if(inHouse)spots.forEach(s=>s.m.material.opacity=.45+.35*Math.sin(NOW*4));managePolice(dt);checkMission(dt);
   keepT-=dt;if(keepT<=0){keepT=2;checkGarage();keepRaceCar();keepBoats()}
   popT-=dt;if(popT<=0){popT=.5;if(!inHouse){managePop();manageParked()}accrue();}
   updateCamera(dt);updHUD(dt);if(frame%3===0)drawMinimap();if(frame%10===0)updButtons();loopSounds();
