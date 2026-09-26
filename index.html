@@ -479,7 +479,7 @@ const angDiff=(a,b)=>{let d=b-a;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+
 const IS_MOBILE=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)||('ontouchstart' in window&&innerWidth<900);
 
 /* ---------- versão dos arquivos (evita o navegador usar arquivo velho guardado) ---------- */
-const BUILD='202609260105';const ASSET=f=>f+'?v='+BUILD;
+const BUILD='202609260109';const ASSET=f=>f+'?v='+BUILD;
 /* ---------- save ---------- */
 const SAVE_KEY='crown-city-v1';
 let save={m:0,money:150,side:0,house:0};
@@ -3486,6 +3486,10 @@ function barInside(){// gente dentro do bar/clube
   const n=HCTX.bar==='veludo'?6:3;for(let i=0;i<n;i++){let p=null;for(let t=0;t<30&&!p;t++){const q=new V3(HO.x+X0+.8+Math.random()*(X1-X0-1.6),HO.y,HO.z+Z0+.8+Math.random()*(Z1-Z0-1.6));if(!COLL.some(c=>q.x>c.x0-.4&&q.x<c.x1+.4&&q.z>c.z0-.4&&q.z<c.z1+.4)&&q.distanceTo(player.pos)>2)p=q}
     if(!p)continue;const a=spawnDancer(p,ids[i%ids.length],keys[i%keys.length],Math.random()*6.28);if(a){a.pos.y=HO.y;BAR_NPCS.push(a)}}}
 /* ---------- ilhas no mar, serra no horizonte, bairro de torres e árvores ---------- */
+// afunda a ilha até a borda do terreno ficar um pouco abaixo do mar (antes a praia ficava 1-2 m acima, como uma laje flutuando)
+function assentarIlha(o){o.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(o),c=b.getCenter(new V3()),meshes=[];o.traverse(m=>{if(m.isMesh)meshes.push(m)});const R=new THREE.Raycaster(),hs=[];
+  for(let a=0;a<64;a++){const t=a/64*6.283;for(let f=.99;f>.3;f-=.015){const q=new V3(c.x+Math.cos(t)*(b.max.x-b.min.x)/2*f,0,c.z+Math.sin(t)*(b.max.z-b.min.z)/2*f);R.set(new V3(q.x,b.max.y+5,q.z),new V3(0,-1,0));const h=R.intersectObjects(meshes,false);if(h.length){hs.push(h[0].point.y);break}}}
+  if(hs.length<8)return;hs.sort((a,b)=>a-b);const borda=hs[Math.floor(hs.length*.35)];o.position.y-=borda+.35;o.updateMatrixWorld(true)}
 function placeExtrasWorld(){if(placeExtrasWorld.done)return;placeExtrasWorld.done=true;barDecos();setupBars();const add=(k,pos,size,rot)=>{const s=EXT.M[k];if(!s)return null;const D=EXT.D[k];const o=s.clone(true);const sc=size/Math.max(D.x,D.z);o.scale.setScalar(sc);o.position.copy(pos);o.rotation.y=rot||0;world.add(o);return {o,sc,D}};
   // serra atrás da cidade (oeste e norte), afundada: a borda da frente do terreno é irregular e ficava flutuando
   const SERRA_Y=-22;
@@ -3500,7 +3504,7 @@ function placeExtrasWorld(){if(placeExtrasWorld.done)return;placeExtrasWorld.don
   if(SPECIAL.temple){const tc=blockC(...SPECIAL.temple);for(const[dx,dz]of[[-14,-14],[14,14]])add('maple',tc.clone().add(new V3(dx,.18,dz)),8,1)}
   // ilhas
   const I1=add('tropical',new V3(SEA_X+320,0,40),80,0),I2=add('danbo',new V3(SEA_X+300,0,SIZE*.72),70,.5);
-  for(const[I,land,nm]of[[I1,new V3(-30,0,0),'Ilha Tropical'],[I2,new V3(-26,0,6),'Rochedo do Farol']]){if(!I)continue;I.o.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(I.o);const meshes=[];I.o.traverse(m=>{if(m.isMesh)meshes.push(m)});
+  for(const[I,land,nm]of[[I1,new V3(-30,0,0),'Ilha Tropical'],[I2,new V3(-26,0,6),'Rochedo do Farol']]){if(!I)continue;assentarIlha(I.o);I.o.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(I.o);const meshes=[];I.o.traverse(m=>{if(m.isMesh)meshes.push(m)});
     const isl={name:nm,box:b,meshes,land:null};ISLANDS.push(isl);const ctr=b.getCenter(new V3());
     // ponto de praia mais próximo da cidade: anda do centro para o oeste enquanto ainda há terreno
     let last=null;for(let d=0;d<(b.max.x-b.min.x)/2;d+=1){const q=new V3(ctr.x-d,0,ctr.z);const y=islandY(q);if(y!==null)last=q.setY(y);else if(last)break}isl.land=last||ctr.clone();const r=Math.min(b.max.x-b.min.x,b.max.z-b.min.z)*.36;const cx=(b.min.x+b.max.x)/2,cz=(b.min.z+b.max.z)/2;BOATCOLL.push({x0:cx-r,x1:cx+r,z0:cz-r,z1:cz+r})}
@@ -4049,7 +4053,7 @@ function trilhoCam(dt){if(!TREM||!TREM.dentro)return false;const v=TREM.vagoes[0
 function tremPerto(){if(!TREM||TREM.dentro||TREM.parado<=0||pcar())return false;return TREM.vagoes.some(v=>v.position.distanceTo(player.pos)<9)}
 /* ---------- Ilha da Pista: a ilha tropical com a trilha em subida; desafio de chegar ao topo ---------- */
 let PISTA=null;
-function nvPista(){if(PISTA||!NV.M.ilha||typeof ISLANDS==='undefined')return;const o=nvClone('ilha');o.position.copy(PISTA_C).setY(-1.2);world.add(o);o.updateMatrixWorld(true);
+function nvPista(){if(PISTA||!NV.M.ilha||typeof ISLANDS==='undefined')return;const o=nvClone('ilha');o.position.copy(PISTA_C).setY(0);world.add(o);if(typeof assentarIlha==='function')assentarIlha(o);o.updateMatrixWorld(true);
   const b=new THREE.Box3().setFromObject(o),meshes=[];o.traverse(m=>{if(m.isMesh)meshes.push(m)});const isl={name:'Ilha da Pista',box:b,meshes,land:null};ISLANDS.push(isl);
   const ctr=b.getCenter(new V3());let last=null;for(let d=0;d<160;d+=1){const q=new V3(ctr.x-d,0,ctr.z);const y=islandY(q);if(y!==null){last=q.setY(y)}else if(last)break}isl.land=last||ctr;
   let topo=null;for(let x=b.min.x+8;x<b.max.x-8;x+=6)for(let z=b.min.z+8;z<b.max.z-8;z+=6){const q=new V3(x,0,z),y=islandY(q);if(y!==null&&(!topo||y>topo.y))topo=q.setY(y)}
