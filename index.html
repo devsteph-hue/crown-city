@@ -479,7 +479,7 @@ const angDiff=(a,b)=>{let d=b-a;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+
 const IS_MOBILE=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)||('ontouchstart' in window&&innerWidth<900);
 
 /* ---------- versão dos arquivos (evita o navegador usar arquivo velho guardado) ---------- */
-const BUILD='202609260044';const ASSET=f=>f+'?v='+BUILD;
+const BUILD='202609260105';const ASSET=f=>f+'?v='+BUILD;
 /* ---------- save ---------- */
 const SAVE_KEY='crown-city-v1';
 let save={m:0,money:150,side:0,house:0};
@@ -815,7 +815,7 @@ function varyPeleCabelo(o){const tone=pick(TONES),hair=pick(HAIRC);o.traverse(x=
 function mixDaJogadora(){return (typeof player!=='undefined'&&player&&player.c&&player.c.mixId)||(save&&save.char&&save.char.type==='mx'?save.char.id:null)}
 function mixEmUso(){const s=new Set();const eu=mixDaJogadora();if(eu)s.add(eu);const P=typeof player!=='undefined'&&player?player.pos:null;
   for(const a of ACTORS)if(a.alive&&a.kind!=='player'&&a.c.mixId&&(!P||a.pos.distanceTo(P)<110))s.add(a.c.mixId);return s}
-const MIX_EXCLUSIVOS=new Set(['jorge']);// modelos de contatos: não aparecem em pedestres nem dançarinos
+const MIX_EXCLUSIVOS=new Set(['jorge','ch03','ch28']);// Seu Jorge, Tati e Rafa// modelos de contatos: não aparecem em pedestres nem dançarinos
 function escolherMix(pref){const uso=mixEmUso();if(pref&&PEOPLE[pref]&&!uso.has(pref)&&!MIX_EXCLUSIVOS.has(pref))return pref;const livres=Object.keys(PEOPLE).filter(id=>!uso.has(id)&&!MIX_EXCLUSIVOS.has(id));return livres.length?pick(livres):null}
 const TINTS_VAR=['#ffe9dc','#e3ecff','#efe3ff','#e2ffe9','#fff6d8','#ffe0ea'],HAIRV=['#1a1310','#6b4226','#a8743d','#d9b26f','#5a1e1e','#8a8a8a','#b8336a','#2a2a3a'];
 function variarMix(c,n){c.o.traverse(m=>{if(!m.isMesh)return;const mats=Array.isArray(m.material)?m.material:[m.material];const novos=mats.map(x=>{const y=x.clone();
@@ -2721,7 +2721,10 @@ function contactPos(c){const[bi,bj]=c.blk,x0=blockX0(bi),z0=blockX0(bj),o=1.9;re
 function spawnContacts(){for(const c of CONTACTS){if(c.actor&&c.actor.alive)continue;const p=contactPos(c);const a=spawnActor('boss',p,safeSpec(c.spec()));a.contact=c.id;a.ally=true;a.idleAnim=pick(['Idle','Idle_FoldArms_Loop','Idle_TalkingPhone_Loop']);c.actor=a;VOICE[c.name]=c.voice}}
 function stepContacts(dt){for(const c of CONTACTS){const a=c.actor;if(!a||!a.alive)continue;if(a.talking)continue;const d=a.pos.distanceTo(player.pos);
   if(d<6&&!pcar()){const y=Math.atan2(player.pos.x-a.pos.x,player.pos.z-a.pos.z);turnTo(a,y,dt,3);if(a.c.curName!=='Wave'&&Math.random()<dt*.15)play(a.c,'Wave',{once:true})}else play(a.c,a.idleAnim)}}
-function nearContact(){if(pcar())return null;for(const c of CONTACTS)if(c.actor&&c.actor.alive&&c.actor.pos.distanceTo(player.pos)<2.4)return c;return null}
+function nearContact(){if(pcar())return null;// quem você acabou de chamar tem preferência; depois, o mais perto de verdade (antes pegava o primeiro da lista)
+  const perto=CONTACTS.filter(c=>c.actor&&c.actor.alive&&c.actor.pos.distanceTo(player.pos)<2.8);if(!perto.length)return null;
+  const chamado=perto.find(c=>c.actor.vindo||(c.actor.visitou&&NOW-c.actor.visitou<120));if(chamado)return chamado;
+  return perto.sort((a,b)=>a.actor.pos.distanceTo(player.pos)-b.actor.pos.distanceTo(player.pos))[0]}
 function relGain(c,n){const r=relOf(c.id);const before=relLevel(r.v);r.v=clamp(r.v+n,0,100);persist();const after=relLevel(r.v);flashMoney(0,(n>0?'+':'')+n+' ♥ '+c.name);if(after!==before&&n>0)setTimeout(()=>banner(c.name,'Agora: '+after),600)}
 function contactTalk(c,lines,done){VOICE[c.name]=c.voice;CASTSPEC[c.name]=()=>c.spec();const a=c.actor;a.talking=true;tempSpk.push(Object.assign(a,{who:c.name}));talkSeq(lines,()=>{a.talking=false;const i=tempSpk.indexOf(a);if(i>=0)tempSpk.splice(i,1);done&&done()})}
 function openContact(c){const r=relOf(c.id),lvl=relLevel(r.v),today=dayNum();const talked=r.day===today;const rows=[];
@@ -2794,7 +2797,7 @@ function aimTarget(){const w=WEAP[player.weapon]||WEAP.pistola;const o=camera.po
 function stepAim(dt){const p=player;if(!p)return;const k=p.weapon;const moving=p.vel&&p.vel.length()>.6;
   const want=(SPREAD[k]||1)*(aiming?.55:1)*(moving?1.9:1)*(p.car?1.4:1);spread+= (want-spread)*Math.min(1,dt*(spread>want?3.5:8));
   const zf=aiming?(ZOOM[k]||55)/zoomMul():62;aimFov+=(zf-aimFov)*Math.min(1,dt*8);if(aiming&&Math.abs(camera.fov-aimFov)>.05){camera.fov=aimFov;camera.updateProjectionMatrix()}
-  const scope=aiming&&k==='sniper';$('scope').classList.toggle('on',scope);if(p.c)p.c.g.visible=!(scope&&!p.car)&&!(p.car&&!p.car.boat&&!p.car.super)&&!(p.car&&!p.car.boat&&carCamI===0);
+  const scope=aiming&&k==='sniper';$('scope').classList.toggle('on',scope);if(p.c)p.c.g.visible=!p.oculto&&!(scope&&!p.car)&&!(p.car&&!p.car.boat&&!p.car.super)&&!(p.car&&!p.car.boat&&carCamI===0);
   $('bZoom').style.display=aiming&&ZSTEPS[k]?'flex':'none';if(!aiming)ZOOMI=0;
   aimTgt=aiming?aimTarget():null;const cr=$('cross');cr.classList.toggle('hot',!!aimTgt);cr.style.setProperty('--g',(4+spread*9)+'px');
   hitT-=dt;$('hitX').classList.toggle('on',hitT>0)}
@@ -3721,10 +3724,10 @@ function placeOndas(){if(!AERO.M.ondas)return;const clip=AERO.anims.find(a=>/ond
 function heliButtons(){if($('bUp'))return;for(const[id,t]of[['bUp','▲<small>subir</small>'],['bDown','▼<small>descer</small>']]){const b=document.createElement('button');b.id=id;b.className='btn';b.innerHTML=t;document.body.appendChild(b);
   const on=e=>{e.preventDefault();b.classList.add('down');HELI_IN[id]=true},off=e=>{e.preventDefault();b.classList.remove('down');HELI_IN[id]=false};b.addEventListener('touchstart',on,{passive:false});b.addEventListener('touchend',off,{passive:false});b.addEventListener('mousedown',on);b.addEventListener('mouseup',off)}}
 const HELI_IN={bUp:false,bDown:false};
-function enterHeli(){const p=player;HELI.on=true;HELI.auto=false;p.busy=true;p.c.g.visible=false;p.dancing=null;heliButtons();document.body.classList.add('veh','heli');sfx('door');
+function enterHeli(){const p=player;HELI.on=true;HELI.auto=false;p.busy=true;p.oculto=true;p.c.g.visible=false;p.dancing=null;heliButtons();document.body.classList.add('veh','heli');sfx('door');
   if(!save.hints||!save.hints.heli){save.hints=save.hints||{};save.hints.heli=1;banner('Helicóptero','▲ ▼ vai e volta, ◀ ▶ vira, SUBIR e DESCER. Sair no ar = salto de paraquedas!')}}
 function exitHeli(){const p=player,H=HELI;const chao=aeroGround(H.pos.x,H.pos.z);const lado=new V3(-Math.cos(H.yaw),0,Math.sin(H.yaw));
-  H.on=false;document.body.classList.remove('heli');if(typeof updButtons==='function')updButtons();p.c.g.visible=true;
+  H.on=false;document.body.classList.remove('heli');if(typeof updButtons==='function')updButtons();p.oculto=false;p.c.g.visible=true;
   if(chao!==null&&H.pos.y-.92-chao<1.3){p.busy=false;p.pos.set(H.pos.x+lado.x*4,chao,H.pos.z+lado.z*4);sfx('door');return}
   // no ar: salta de paraquedas; o helicóptero desce sozinho
   H.auto=true;p.pos.set(H.pos.x+lado.x*3,H.pos.y-1,H.pos.z+lado.z*3);PARA={vy:0,t:0,aberto:false,canopy:null};play(p.c,'Idle');sfx('door');banner('Salto!','O paraquedas abre em instantes. Use o analógico para guiar.')}
@@ -3878,6 +3881,10 @@ addEventListener('keydown',e=>{if(e.key==='F9'){e.preventDefault();if(state==='p
 function botaoHack(){const m=document.getElementById('hudMais');if(!m||document.getElementById('bHack'))return;const b=document.createElement('button');b.id='bHack';b.dataset.ic='💰';b.textContent='Hack de dinheiro (+$ 50.000)';
   b.onclick=e=>{e.stopPropagation();hackDinheiro()};m.appendChild(b)}
 setInterval(botaoHack,1500);
+// atalho no menu ☰ para o app Códigos do celular
+function botaoCodigos(){const m=document.getElementById('hudMais');if(!m||document.getElementById('bCodigos'))return;const b=document.createElement('button');b.id='bCodigos';b.dataset.ic='🔑';b.textContent='Códigos';
+  b.onclick=e=>{e.stopPropagation();m.classList.remove('on');if(typeof togglePhone==='function'){if(!(typeof PHONE!=='undefined'&&PHONE.open))togglePhone();phoneGo('codigos')}};const h=document.getElementById('bHack');if(h)m.insertBefore(b,h);else m.appendChild(b)}
+setInterval(botaoCodigos,1500);
 /* ===================== CONTROLES: PC x celular, teclas, tiro automático, mapa sempre com o heliporto ===================== */
 // 1) computador com tela de toque: usa o modo do que você está usando agora (mouse/teclado = PC; toque = celular)
 let ULTIMO_TOQUE=0;
@@ -4056,8 +4063,8 @@ function stepPista(dt){const P=PISTA;if(!P||!P.topo)return;P.anel.material.opaci
     if(p.pos.distanceTo(P.topo)<7){P.ativo=false;P.fim=NOW;addMoney(600);if(typeof addResp==='function')addResp(2);sfx('cash');banner('🏆 No topo!','Desafio da Trilha: +$ 600 e respeito')}
     else if(P.t<=0){P.ativo=false;P.fim=NOW;banner('Tempo esgotado','Volte ao anel amarelo da praia para tentar de novo')}}}
 /* ---------- ENTRAR/SAIR do trem pelo mesmo botão; câmera do trem ---------- */
-const _doCarNovos=doCar;doCar=function(){if(TREM&&TREM.dentro){if(TREM.parado>0){TREM.dentro=false;player.busy=false;player.c.g.visible=true;const E=ESTACOES.reduce((a,e)=>e.pos&&e.pos.distanceTo(TREM.vagoes[0].position)<(a?a.pos.distanceTo(TREM.vagoes[0].position):1e9)?e:a,null);player.pos.copy(E?E.pos:TREM.vagoes[0].position).setY(.18);sfx('door')}else banner('Trem em movimento','Espere a próxima estação para descer');return}
-  if(tremPerto()){TREM.dentro=true;player.busy=true;player.c.g.visible=false;sfx('door');banner('🚆 A bordo','Próxima parada: '+ESTACOES[TREM.alvo].nome);return}_doCarNovos()};
+const _doCarNovos=doCar;doCar=function(){if(TREM&&TREM.dentro){if(TREM.parado>0){TREM.dentro=false;player.busy=false;player.oculto=false;player.c.g.visible=true;const E=ESTACOES.reduce((a,e)=>e.pos&&e.pos.distanceTo(TREM.vagoes[0].position)<(a?a.pos.distanceTo(TREM.vagoes[0].position):1e9)?e:a,null);player.pos.copy(E?E.pos:TREM.vagoes[0].position).setY(.18);sfx('door')}else banner('Trem em movimento','Espere a próxima estação para descer');return}
+  if(tremPerto()){TREM.dentro=true;player.busy=true;player.oculto=true;player.c.g.visible=false;sfx('door');banner('🚆 A bordo','Próxima parada: '+ESTACOES[TREM.alvo].nome);return}_doCarNovos()};
 const _updCamNovos=updateCamera;updateCamera=function(dt){if(trilhoCam(dt))return;_updCamNovos(dt)};
 /* ---------- carregar cada pacote quando precisar ---------- */
 /* ---------- Casa Vermelha: imóvel à venda na área sul (por fora o modelo real; por dentro, a casa tropical) ---------- */
@@ -4188,11 +4195,11 @@ function taxiViagem(destino,aoChegar,passageiro){if(TAXI)return;const r=roadPoin
 function stepTaxi(dt){const T=TAXI;if(!T)return;const t=T.c;T.tt+=dt;const f=new V3(Math.sin(t.yaw),0,Math.cos(t.yaw));
   if(T.fase==='chega'){const v=Math.max(0,11*(1-T.tt/2.2));t.pos.addScaledVector(f,v*dt);t.g.position.copy(t.pos);
     if(T.tt>2.3){T.fase='embarca';T.tt=0;const porta=t.pos.clone().addScaledVector(carRight(t),-(t.t.W/2+.8));player.pos.copy(porta).setY(.18);player.yaw=Math.atan2(t.pos.x-porta.x,t.pos.z-porta.z);player.c.g.rotation.y=player.yaw;play(player.c,'Interact',{once:true});sfx('door')}}
-  else if(T.fase==='embarca'){if(T.tt>.8){player.c.g.visible=false;player.busy=true;if(T.passageiro&&T.passageiro.c)T.passageiro.c.g.visible=false;T.fase='anda';T.tt=0;sfx('door')}}
+  else if(T.fase==='embarca'){if(T.tt>.8){player.c.g.visible=false;player.oculto=true;player.busy=true;if(T.passageiro&&T.passageiro.c)T.passageiro.c.g.visible=false;T.fase='anda';T.tt=0;sfx('door')}}
   else if(T.fase==='anda'){t.v=Math.min(16,t.v+dt*6);const np=t.pos.clone().addScaledVector(f,t.v*dt);if(!COLL.some(k=>np.x>k.x0-1&&np.x<k.x1+1&&np.z>k.z0-1&&np.z<k.z1+1&&(k.h||9)>1))t.pos.copy(np);t.g.position.copy(t.pos);player.pos.copy(t.pos);
     if(T.tt>4.2){T.fase='viaja';T.tt=0;fadeTaxi(true)}}
   else if(T.fase==='viaja'){if(T.tt>.7){const r=roadPointAny(T.destino,2,22)||{pos:T.destino.clone(),yaw:0};t.pos.copy(r.pos);t.yaw=r.yaw;t.g.position.copy(t.pos);t.g.rotation.y=t.yaw;t.v=0;player.pos.copy(t.pos);T.fase='desce';T.tt=0;fadeTaxi(false)}}
-  else if(T.fase==='desce'){if(T.tt>.6&&!T.desceu){T.desceu=true;const porta=t.pos.clone().addScaledVector(carRight(t),-(t.t.W/2+.8));player.pos.copy(porta).setY(.18);player.c.g.visible=true;player.busy=false;player.yaw=t.yaw;player.c.g.rotation.y=player.yaw;camYaw=t.yaw;sfx('door');
+  else if(T.fase==='desce'){if(T.tt>.6&&!T.desceu){T.desceu=true;const porta=t.pos.clone().addScaledVector(carRight(t),-(t.t.W/2+.8));player.pos.copy(porta).setY(.18);player.oculto=false;player.c.g.visible=true;player.busy=false;player.yaw=t.yaw;player.c.g.rotation.y=player.yaw;camYaw=t.yaw;sfx('door');
       if(T.passageiro&&T.passageiro.c){T.passageiro.pos.copy(porta).addScaledVector(new V3(Math.sin(t.yaw),0,Math.cos(t.yaw)),-1.4).setY(.18);T.passageiro.c.g.visible=true;T.passageiro.c.g.position.copy(T.passageiro.pos)}}
     if(T.tt>1.5){T.fase='vai';T.tt=0;const cb=T.aoChegar;setTimeout(cb,50)}}
   else if(T.fase==='vai'){t.v=Math.min(14,t.v+dt*6);t.pos.addScaledVector(f,t.v*dt);t.g.position.copy(t.pos);if(T.tt>4){removeCar&&removeCar(t);TAXI=null}}}
