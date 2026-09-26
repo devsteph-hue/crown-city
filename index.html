@@ -479,7 +479,7 @@ const angDiff=(a,b)=>{let d=b-a;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+
 const IS_MOBILE=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)||('ontouchstart' in window&&innerWidth<900);
 
 /* ---------- versão dos arquivos (evita o navegador usar arquivo velho guardado) ---------- */
-const BUILD='202609260039';const ASSET=f=>f+'?v='+BUILD;
+const BUILD='202609260044';const ASSET=f=>f+'?v='+BUILD;
 /* ---------- save ---------- */
 const SAVE_KEY='crown-city-v1';
 let save={m:0,money:150,side:0,house:0};
@@ -4159,13 +4159,13 @@ function semMunicao(k){const w=WEAP[k];if(!w)return;if(NOW-SEMMUN_T<1.2)return;S
 /* ===================== CENAS MOSTRADAS: presente na mão, puxar do carro (sem arremesso), táxi de verdade, saídas e encontros ===================== */
 // ---------- mão direita de uma personagem (realista ou montável) ----------
 function maoDireita(ch){if(!ch||!ch.o)return null;if(ch.mix&&typeof mxPref==='function'){const b=ch.o.getObjectByName(BN(mxPref(ch.o),'RightHand'));if(b)return b}
-  let achou=null;ch.o.traverse(o=>{if(!achou&&o.isBone&&/(hand.*(r|right)|right.*hand|hand_r|handr)/i.test(o.name))achou=o});return achou}
-function naMao(obj,ch,tam){const b=maoDireita(ch);if(!b)return false;if(obj.parent)obj.parent.remove(obj);b.add(obj);const s=new V3();b.getWorldScale(s);const k=1/(s.x||1);
-  obj.scale.setScalar(tam*k);obj.position.set(0,.09*k,.04*k);obj.rotation.set(0,0,0);return true}
+  let achou=null;ch.o.traverse(o=>{if(!achou&&o.isBone&&/(hand.*(r|right)|right.*hand|hand_r|handr|^wrist\.?_?r$)/i.test(o.name))achou=o});return achou}
+function naMao(obj,ch,tam){const b=maoDireita(ch);if(!b)return false;if(obj.userData.base==null)obj.userData.base=obj.scale.x;if(obj.parent)obj.parent.remove(obj);b.add(obj);const s=new V3();b.getWorldScale(s);const k=1/(s.x||1);
+  obj.scale.setScalar(obj.userData.base*tam*k);/* mantém o tamanho real da caixa (35 cm) */obj.position.set(0,.09*k,.04*k);obj.rotation.set(0,0,0);return true}
 // ---------- presente: você segura, estende e entrega na mão da pessoa ----------
 entregarPresente=function(de,para){if(!EXT.gift||!de||!para)return;const g=EXT.gift.clone(true);g.traverse(m=>{if(m.isMesh)m.castShadow=true});
   if(!naMao(g,de.c,.8)){g.position.copy(de.pos).add(new V3(0,1.1,0));world.add(g)}play(de.c,'Interact',{once:true,fade:.1});de.actT=1.2;
-  setTimeout(()=>{if(!para.alive){g.parent&&g.parent.remove(g);return}if(!naMao(g,para.c,.8)){para.c.g.add(g);g.position.set(0,1.05,.35)}sfx('click')},900);
+  setTimeout(()=>{if(!para.alive){g.parent&&g.parent.remove(g);return}if(!naMao(g,para.c,.8)){if(g.parent)g.parent.remove(g);para.c.g.add(g);g.scale.setScalar(g.userData.base*.8);g.position.set(0,1.05,.35)}sfx('click')},900);
   setTimeout(()=>{let k=1;const enc=()=>{k-=.08;if(k<=0){g.parent&&g.parent.remove(g);return}g.scale.multiplyScalar(.92);requestAnimationFrame(enc)};enc()},3600)};
 // ---------- puxar do carro: a pessoa sai pela porta e cai ali do lado (sem arremesso) ----------
 jackCar=function(c,done){const p=player;const R=carRight(c);const door=c.pos.clone().addScaledVector(R,-(c.t.W/2+.75));door.y=onRoad(door)?0:.18;
