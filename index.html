@@ -464,7 +464,7 @@ const angDiff=(a,b)=>{let d=b-a;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+
 const IS_MOBILE=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)||('ontouchstart' in window&&innerWidth<900);
 
 /* ---------- versão dos arquivos (evita o navegador usar arquivo velho guardado) ---------- */
-const BUILD='202609252319';const ASSET=f=>f+'?v='+BUILD;
+const BUILD='202609260008';const ASSET=f=>f+'?v='+BUILD;
 /* ---------- save ---------- */
 const SAVE_KEY='crown-city-v1';
 let save={m:0,money:150,side:0,house:0};
@@ -1898,6 +1898,7 @@ function icon(g,kind,x,y,s){g.save();g.translate(x,y);const R=s/2;
   else if(kind==='docas'){badge('#1f8fb3');g.strokeStyle='#fff';g.lineWidth=R*.16;g.beginPath();g.moveTo(0,-R*.5);g.lineTo(0,R*.45);g.moveTo(-R*.3,-R*.25);g.lineTo(R*.3,-R*.25);g.stroke();g.beginPath();g.arc(0,R*.05,R*.42,.3,Math.PI-.3);g.stroke()}
   else if(kind==='missao'){g.fillStyle='rgba(0,0,0,.5)';g.beginPath();g.arc(0,1,R+1.5,0,7);g.fill();g.fillStyle='#f2c200';g.beginPath();g.arc(0,0,R,0,7);g.fill();g.fillStyle='#fff';g.beginPath();g.arc(0,0,R*.38,0,7);g.fill()}
   else if(kind==='ilha'){badge('#1aa39a');g.strokeStyle='#fff';g.lineWidth=R*.16;g.lineCap='round';g.beginPath();g.moveTo(-R*.05,R*.5);g.quadraticCurveTo(R*.1,0,0,-R*.3);g.stroke();g.fillStyle='#fff';for(const a of[-2.4,-1.6,-.8,0]){g.beginPath();g.ellipse(Math.cos(a)*R*.28,-R*.3+Math.sin(a)*R*.18,R*.32,R*.11,a,0,7);g.fill()}}
+  else if(kind==='casav'){badge('#c0392b');g.fillStyle='#fff';g.beginPath();g.moveTo(0,-R*.55);g.lineTo(R*.55,-R*.05);g.lineTo(R*.38,-R*.05);g.lineTo(R*.38,R*.5);g.lineTo(-R*.38,R*.5);g.lineTo(-R*.38,-R*.05);g.lineTo(-R*.55,-R*.05);g.closePath();g.fill()}
   else if(kind==='bmw'){badge('#1c69d4');g.fillStyle='#fff';g.font=`800 ${Math.round(R*.95)}px Arial`;g.textAlign='center';g.textBaseline='middle';g.fillText('M',0,1)}
   else if(kind==='trem'){badge('#0f7a5a');g.fillStyle='#fff';g.fillRect(-R*.45,-R*.5,R*.9,R*.8);g.fillStyle='#0f7a5a';g.fillRect(-R*.32,-R*.36,R*.64,R*.3);g.fillStyle='#fff';g.fillRect(-R*.4,R*.36,R*.2,R*.16);g.fillRect(R*.2,R*.36,R*.2,R*.16)}
   else if(kind==='pista'){badge('#d9a400');g.strokeStyle='#fff';g.lineWidth=R*.18;g.beginPath();g.moveTo(-R*.5,R*.45);g.lineTo(-R*.1,-R*.1);g.lineTo(R*.15,R*.15);g.lineTo(R*.5,-R*.45);g.stroke()}
@@ -1962,7 +1963,7 @@ function drawBigMap(){const G=bigGeom(),g=G.cv.getContext('2d'),S=p=>[G.ox+(p.x-
   if(waypoint){const[x,y]=S(waypoint);icon(g,'destino',x,y,28*G.dpr)}if(at){const[x,y]=S(at);icon(g,'missao',x,y,22*G.dpr)}
   {const[x,y]=S(P);g.save();g.translate(x,y);g.rotate(-(pcar()?pcar().yaw:player.yaw)+Math.PI);g.fillStyle='#fff';g.strokeStyle='#000';g.lineWidth=2;g.beginPath();g.moveTo(0,-12*G.dpr);g.lineTo(8*G.dpr,9*G.dpr);g.lineTo(0,4*G.dpr);g.lineTo(-8*G.dpr,9*G.dpr);g.closePath();g.stroke();g.fill();g.restore()}
   // legenda
-  const L=$('bigLeg');if(!L.dataset.done){L.dataset.done=1;const items=[['casa','Casa'],['hospital','Hospital'],['policia','Delegacia'],['armas','Armas do Zé'],['garagem','Garagem'],['chefona','Chefona'],['clube','Clube Veludo'],['fraude','Fraude de seguro'],['corrida','Corrida'],['docas','Docas'],['ilha','Ilhas'],['heli','Heliporto'],['bmw','Concessionária BMW'],['trem','Estação de trem'],['pista','Ilha da Pista'],['estatua','Estátua Aurora'],['destrocos','Destroços do avião'],['missao','Missão'],['destino','Seu destino']];
+  const L=$('bigLeg');if(!L.dataset.done){L.dataset.done=1;const items=[['casa','Casa'],['hospital','Hospital'],['policia','Delegacia'],['armas','Armas do Zé'],['garagem','Garagem'],['chefona','Chefona'],['clube','Clube Veludo'],['fraude','Fraude de seguro'],['corrida','Corrida'],['docas','Docas'],['ilha','Ilhas'],['heli','Heliporto'],['bmw','Concessionária BMW'],['casav','Casa Vermelha'],['trem','Estação de trem'],['pista','Ilha da Pista'],['estatua','Estátua Aurora'],['destrocos','Destroços do avião'],['missao','Missão'],['destino','Seu destino']];
     L.innerHTML=items.map(([k,n])=>`<div><canvas width="44" height="44" data-i="${k}"></canvas><span>${n}</span></div>`).join('');L.querySelectorAll('canvas').forEach(c=>icon(c.getContext('2d'),c.dataset.i,22,22,34))}}
 function bigTap(e){const G=bigGeom(),r=G.cv.getBoundingClientRect(),x=(e.clientX-r.left)*G.dpr,y=(e.clientY-r.top)*G.dpr;const wx=(x-G.ox)/G.k+MX0,wz=(y-G.oy)/G.k+MZ0;
   // tocar numa ilha: ela vira o destino (e lembra de pegar um barco nas docas)
@@ -2946,10 +2947,10 @@ function applyRealFacades(){const bricks=['red_brick','stacked_brick_wall','slum
 const FLOORTX=['interior_tiles','terracotta_floor_tiles','patterned_terracotta_tiling',null];
 /* ===================== INTERIORES REALISTAS (Sketchfab, CC-BY) ===================== */
 const INT={};let intReady=false,HSPAWN=null,INLIGHTS=null;
-const DECOS={gaming:{id:'gaming',name:'Quarto gamer',s:.005,floor:1.99,bed:[-1,1.2],lvl:0},cyber:{id:'cyber',name:'Loft cyberpunk',s:20,floor:-.4,bed:[0,0],ceil:2.0,lvl:1},minimal:{id:'minimal',name:'Suíte minimalista',s:1,floor:-1.3,bed:[.2,-1.6],lvl:2},mirror:{id:'mirror',name:'Cobertura clean',s:1,floor:-.02,bed:[-.5,-1],lvl:3},modern:{id:'modern',name:'Apartamento moderno',s:.0016,floor:.04,bed:[-.4,-.5],door:[.8,1.5],bounds:[-2.8,4.3,-1.9,2.2],lvl:3},tropical:{id:'tropical',name:'Casa tropical',s:.01,floor:1.3,bed:[-1.5,1],light:.45,lvl:3}};
+const DECOS={gaming:{id:'gaming',name:'Quarto gamer',s:.005,floor:1.99,bed:[-1,1.2],lvl:0},cyber:{id:'cyber',name:'Loft cyberpunk',s:20,floor:-.4,bed:[0,0],ceil:2.0,lvl:1},minimal:{id:'minimal',name:'Suíte minimalista',s:1,floor:-1.3,bed:[.2,-1.6],lvl:2},mirror:{id:'mirror',name:'Cobertura clean',s:1,floor:-.02,bed:[-.5,-1],lvl:3},modern:{id:'modern',name:'Apartamento moderno',s:.0016,floor:.04,bed:[-.4,-.5],door:[.8,1.5],bounds:[-2.8,4.3,-1.9,2.2],lvl:3},tropical:{id:'tropical',name:'Casa tropical',s:.01,floor:1.3,bed:[-1.5,1],light:.45,lvl:3},loft2:{id:'loft2',name:'Loft industrial',s:1,floor:0,bed:[0,0],ceil:3.1,light:1.25,lvl:3}};
 const INTCFG={0:{id:'gaming',s:.005,floor:1.99,bed:[-1,1.2]},1:{id:'cyber',s:20,floor:-.4,bed:[0,0],ceil:2.0},2:{id:'minimal',s:1,floor:-1.3,bed:[.2,-1.6]},3:{id:'mirror',s:1,floor:-.02,bed:[-.5,-1]}};
 const CLIP_CEIL=new THREE.Plane(new V3(0,-1,0),2.45),CLIP_CUT=new THREE.Plane(new V3(0,0,-1),0);
-function loadInteriors(retry){loadBig('interiores.glb',g=>{for(const n of['gaming','minimal','mirror','cyber','modern','tropical','bedroom2','timeroom']){const o=g.scene.getObjectByName('IN_'+n);if(o){o.traverse(m=>{if(m.isMesh&&!m.geometry.attributes.normal)m.geometry.computeVertexNormals();if(n==='tropical'&&m.isMesh){const ms=Array.isArray(m.material)?m.material:[m.material];ms.forEach(x=>{if(x.color&&!x.userData.dim){x.color.multiplyScalar(.72);x.roughness=Math.max(x.roughness||0,.75);x.userData.dim=1}})}});INT[n]=o}}window.__TW={tower:g.scene.getObjectByName('TW_tower'),palm:g.scene.getObjectByName('TW_palm')};intReady=true;if(cityBuilt)placeTowerAndPalms();if(inHouse)buildInterior()},undefined,()=>{if(!retry)loadInteriors(true)})}
+function loadInteriors(retry){loadBig('interiores.glb',g=>{for(const n of['gaming','minimal','mirror','cyber','modern','tropical','bedroom2','timeroom']){const o=g.scene.getObjectByName('IN_'+n);if(o){o.traverse(m=>{if(m.isMesh&&!m.geometry.attributes.normal)m.geometry.computeVertexNormals();if(n==='tropical'&&m.isMesh){const ms=Array.isArray(m.material)?m.material:[m.material];ms.forEach(x=>{if(x.color&&!x.userData.dim){x.color.multiplyScalar(.72);x.roughness=Math.max(x.roughness||0,.75);x.userData.dim=1}})}});INT[n]=o}}if(!INT.loft2)loadBig('loft.glb',g2=>{const o2=g2.scene.getObjectByName('IN_loft2');if(o2){o2.traverse(m=>{if(m.isMesh&&!m.geometry.attributes.normal)m.geometry.computeVertexNormals()});INT.loft2=o2;if(inHouse)buildInterior()}});window.__TW={tower:g.scene.getObjectByName('TW_tower'),palm:g.scene.getObjectByName('TW_palm')};intReady=true;if(cityBuilt)placeTowerAndPalms();if(inHouse)buildInterior()},undefined,()=>{if(!retry)loadInteriors(true)})}
 function buildGLBInterior(cfg){const src=INT[cfg.id];if(!src)return false;
   if(houseG){scene.remove(houseG);houseColl.forEach(c=>{const i=COLL.indexOf(c);if(i>=0)COLL.splice(i,1)})}houseColl=[];spots=[];
   houseG=new THREE.Group();houseG.position.copy(HO);scene.add(houseG);if(ok3d)renderer.localClippingEnabled=true;
@@ -3285,7 +3286,7 @@ function cockpitCam(dt){const c=pcar();if(!c||c.boat||carCamI!==0||aiming)return
   if(player.c)player.c.g.visible=false;if(scene.userData.sky)scene.userData.sky.position.copy(camera.position);camPos.copy(head);camLook.copy(head.clone().add(dir));return true}
 function cycleCarCam(){carCamI=carCamI===0?2:0;try{localStorage.setItem('cc-carcam',carCamI)}catch(e){}$('bCam').textContent='CÂMERA';banner('Visão',carCamI===0?'Volante (dentro do carro)':'De fora do carro');if(typeof updButtons==='function')updButtons();if(carCamI!==0&&(camera.near<.1||camera.fov!==62)){camera.near=.1;camera.fov=62;camera.updateProjectionMatrix()}sfx('click')}
 // ---------- imóveis para comprar pela cidade, cada um com um interior ----------
-const PROPS=[{id:'orla',name:'Apartamento na Orla',deco:'tropical',price:18000},{id:'centro',name:'Loft no Centro',deco:'cyber',price:12000},{id:'moderno',name:'Apartamento Moderno',deco:'modern',price:22000},{id:'mirror',name:'Cobertura Clean',deco:'mirror',price:35000},{id:'suite',name:'Suíte Minimalista',deco:'minimal',price:15000}];
+const PROPS=[{id:'orla',name:'Apartamento na Orla',deco:'tropical',price:18000},{id:'centro',name:'Loft no Centro',deco:'loft2',price:12000},{id:'moderno',name:'Apartamento Moderno',deco:'modern',price:22000},{id:'mirror',name:'Cobertura Clean',deco:'mirror',price:35000},{id:'suite',name:'Suíte Minimalista',deco:'minimal',price:15000}];
 let HCTX=null;
 function setupProps(){const spots=[[1,1,2],[3,3,0],[4,3,1],[4,2,3],[2,0,2],[1,2,1],[2,3,3]];PROPS.forEach((pr,i)=>{if(!spots[i]){pr.pos=null;return}const[bi,bj,side]=spots[i];if(isSpecial(bi,bj)){pr.pos=null;return}const x0=blockX0(bi),z0=blockX0(bj),o=1.7;
   pr.pos=side===0?new V3(x0+BLK*.62,.18,z0+o):side===1?new V3(x0+BLK*.38,.18,z0+BLK-o):side===2?new V3(x0+o,.18,z0+BLK*.62):new V3(x0+BLK-o,.18,z0+BLK*.38);
@@ -3935,10 +3936,10 @@ if(typeof landSpot==='function'){const _landSpotPonte=landSpot;landSpot=function
    Cada pacote carrega quando você chega perto da área (no celular) — bmw.glb, moto.glb, trem.glb, pista.glb, estatua.glb */
 const NV={M:{},pedido:{}};let NOVOS_BLIPS=[];
 Object.assign(SUPER,{m2cs:{name:'BMW M2 CS',s:1,L:4.58,W:2.08,H:1.4,max:56,acc:18},m2v:{name:'BMW M2 Vorsteiner',s:1,L:4.6,W:2.09,H:1.42,max:58,acc:19},moto:{name:'BMW S1000 RR',s:1,L:2.07,W:.81,H:1.18,max:66,acc:24}});
-function nvCarregar(arq){if(NV.pedido[arq])return;NV.pedido[arq]=1;loadBig(arq,g=>{for(const o of g.scene.children.slice())if(/^NV_/.test(o.name)){const k=o.name.slice(3);NV.M[k]=o;if(SUPER[k])SCM[k]=o}NV.pedido[arq]=2;nvMontar()},null,()=>{NV.pedido[arq]=3})}
+function nvCarregar(arq){if(NV.pedido[arq])return;NV.pedido[arq]=1;loadBig(arq,g=>{for(const o of g.scene.children.slice()){if(/^NV_/.test(o.name)){const k=o.name.slice(3);NV.M[k]=o;if(SUPER[k])SCM[k]=o}if(o.name==='CASA_vermelha')NV.M.vermelha=o}NV.pedido[arq]=2;nvMontar()},null,()=>{NV.pedido[arq]=3})}
 function nvClone(k){const s=NV.M[k];if(!s)return null;const o=s.clone(true);o.traverse(m=>{if(m.isMesh){m.castShadow=true;m.receiveShadow=true}});return o}
-const SHOW={x:48,z:SIZE+46},ESTAT={x:48,z:SIZE+84},PISTA_C=new V3(SEA_X+300,0,SIZE+330);
-NOVOS_BLIPS.push({p:new V3(SHOW.x,0,SHOW.z),k:'bmw',n:'Concessionária BMW'},{p:new V3(ESTAT.x,0,ESTAT.z),k:'estatua',n:'Estátua Aurora'},{p:PISTA_C.clone(),k:'pista',n:'Ilha da Pista'});
+const SHOW={x:48,z:SIZE+46},ESTAT={x:48,z:SIZE+84},PISTA_C=new V3(SEA_X+300,0,SIZE+330),CASAV={x:-6,z:SIZE+64};
+NOVOS_BLIPS.push({p:new V3(SHOW.x,0,SHOW.z),k:'bmw',n:'Concessionária BMW'},{p:new V3(ESTAT.x,0,ESTAT.z),k:'estatua',n:'Estátua Aurora'},{p:PISTA_C.clone(),k:'pista',n:'Ilha da Pista'},{p:new V3(CASAV.x,0,CASAV.z),k:'casav',n:'Casa Vermelha (à venda)'});
 /* ---------- chão de grama e árvores na área sul (antes: asfalto vazio) ---------- */
 let NV_CHAO=false;
 function nvChao(){if(NV_CHAO)return;NV_CHAO=true;const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');g.fillStyle='#4f7a36';g.fillRect(0,0,256,256);
@@ -3948,7 +3949,7 @@ function nvChao(){if(NV_CHAO)return;NV_CHAO=true;const c=document.createElement(
   // caminhos de pedra ligando a cidade à concessionária, ao heliporto, à estátua e aos destroços
   const pedra=new THREE.MeshStandardMaterial({color:lin('#b8ad9a'),roughness:.9});
   for(const[x,z,w,d]of[[48,SIZE+24,5,36],[48,SIZE+66,5,30],[33,SIZE+84,26,4],[20,SIZE+100,4,34]]){const m=new THREE.Mesh(new THREE.BoxGeometry(w,.06,d),pedra);m.position.set(x,.14,z);m.receiveShadow=true;world.add(m)}
-  if(typeof realTree==='function'){for(let i=0;i<46;i++){const x=-16+Math.random()*84,z=SIZE+22+Math.random()*120;const livre=[[48,SIZE+46,17],[18,SIZE+42,12],[20,SIZE+116,20],[48,SIZE+84,8]].every(([a,b,r])=>Math.hypot(x-a,z-b)>r)&&Math.abs(x-48)>4&&Math.abs(x-20)>3;
+  if(typeof realTree==='function'){for(let i=0;i<46;i++){const x=-16+Math.random()*84,z=SIZE+22+Math.random()*120;const livre=[[48,SIZE+46,17],[18,SIZE+42,12],[20,SIZE+116,20],[48,SIZE+84,8],[CASAV.x,CASAV.z,11]].every(([a,b,r])=>Math.hypot(x-a,z-b)>r)&&Math.abs(x-48)>4&&Math.abs(x-20)>3;
       if(livre)realTree(x,z,rnd(.8,1.25))}if(typeof flushTrees==='function')flushTrees()}}
 /* ---------- concessionária BMW: dois M2 e a moto girando em plataformas; ENTRAR = test drive ---------- */
 let SHOWCARS=[],SHOW_OK=false;
@@ -4036,9 +4037,15 @@ const _doCarNovos=doCar;doCar=function(){if(TREM&&TREM.dentro){if(TREM.parado>0)
   if(tremPerto()){TREM.dentro=true;player.busy=true;player.c.g.visible=false;sfx('door');banner('🚆 A bordo','Próxima parada: '+ESTACOES[TREM.alvo].nome);return}_doCarNovos()};
 const _updCamNovos=updateCamera;updateCamera=function(dt){if(trilhoCam(dt))return;_updCamNovos(dt)};
 /* ---------- carregar cada pacote quando precisar ---------- */
-function nvMontar(){nvChao();nvShow();nvEstatua();nvTrem();nvPista()}
+/* ---------- Casa Vermelha: imóvel à venda na área sul (por fora o modelo real; por dentro, a casa tropical) ---------- */
+let CASA_OK=false;
+function nvCasa(){if(CASA_OK||!NV.M.vermelha)return;CASA_OK=true;const o=nvClone('vermelha');o.position.set(CASAV.x,.12,CASAV.z);world.add(o);addColl(CASAV.x-5,CASAV.x+5,CASAV.z-6,CASAV.z+6,3.9);
+  const pr={id:'vermelha',name:'Casa Vermelha',deco:'tropical',price:30000,pos:new V3(CASAV.x+5.9,.18,CASAV.z)};
+  const ring=new THREE.Mesh(new THREE.RingGeometry(.55,.75,32),new THREE.MeshBasicMaterial({color:lin('#7db7ff'),transparent:true,opacity:.85,side:THREE.DoubleSide,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.copy(pr.pos).setY(.2);world.add(ring);pr.ring=ring;
+  if(!PROPS.some(p=>p.id==='vermelha'))PROPS.push(pr)}
+function nvMontar(){nvChao();nvCasa();nvShow();nvEstatua();nvTrem();nvPista()}
 function stepNovos(dt){if(typeof EXT==='undefined'||!(EXT.ready||EXT.failed||NOW>25))return;const p=player;if(!p)return;const sul=p.pos.z>SIZE-80,mar=p.pos.x>SEA_X-40;
-  nvChao();nvCarregar('trem.glb');if(!IS_MOBILE||sul){nvCarregar('bmw.glb');nvCarregar('moto.glb');nvCarregar('estatua.glb')}if(!IS_MOBILE||mar||sul)nvCarregar('pista.glb');
+  nvChao();nvCarregar('trem.glb');if(!IS_MOBILE||sul){nvCarregar('casa.glb');nvCarregar('bmw.glb');nvCarregar('moto.glb');nvCarregar('estatua.glb')}if(!IS_MOBILE||mar||sul)nvCarregar('pista.glb');
   stepShow(dt);stepEstatua(dt);stepTrem(dt);stepPista(dt);
   if(tremPerto()){const b=$('bCar');if(b)b.classList.remove('dim')}}
 /* ===================== CONTATOS DE VERDADE: horário de trabalho, táxi até o trabalho (lá dentro) e visita que vem mesmo =====================
@@ -4169,7 +4176,8 @@ function checkFiles(em){const L=$('loadTxt');L.innerHTML='Conferindo os arquivos
   .then(rs=>{L.innerHTML=rs.map(([f,n,got,h])=>{const ok=got===n&&h&&String.fromCharCode(...h)==='glTF';
       const tx=got===null?'sem conexão':got<0?'não encontrado (erro '+(-got)+')':(got.toLocaleString('pt-BR')+' bytes'+(got!==n?' — deveria ter '+n.toLocaleString('pt-BR'):''));
       return (ok?'✓ ':'✗ ')+'<b>'+f+'</b>: '+tx}).join('<br>')+'<br><span style="opacity:.7">Os arquivos com ✗ precisam ser enviados de novo (baixe no computador, confira o tamanho e suba). Detalhe técnico: '+em+'</span>'})}
-function assetStatus(){const L=[['predios.glb','Prédios realistas'],['extras.glb','Extras (bares, ilhas, danças)'],['texturas.glb','Texturas reais'],['interiores.glb','Interiores e torre'],['supercarros.glb','Carros realistas'],['gente.glb','Pessoas realistas'],['aereo.glb','Helicóptero, heliporto e ondas'],['dancas.glb','Danças, beijos e conversas'],['ponte.glb','Pontes de madeira'],['bmw.glb','Concessionária BMW'],['moto.glb','Moto BMW S1000 RR'],['trem.glb','Trem e trilhos'],['pista.glb','Ilha da Pista'],['estatua.glb','Estátua Aurora']];
+function assetStatus(){const L=[['predios.glb','Prédios realistas'],['extras.glb','Extras (bares, ilhas, danças)'],['texturas.glb','Texturas reais'],['interiores.glb','Interiores e torre'],['supercarros.glb','Carros realistas'],['gente.glb','Pessoas realistas'],['aereo.glb','Helicóptero, heliporto e ondas'],['dancas.glb','Danças, beijos e conversas'],['ponte.glb','Pontes de madeira'],['bmw.glb','Concessionária BMW'],['moto.glb','Moto BMW S1000 RR'],['trem.glb','Trem e trilhos'],['pista.glb','Ilha da Pista'],['estatua.glb','Estátua Aurora'],['loft.glb','Loft no Centro (interior)'],['casa.glb','Casa Vermelha']];
+  EXPECT['loft.glb']=2767592;EXPECT['casa.glb']=3636416;
   EXPECT['bmw.glb']=3623952;EXPECT['moto.glb']=4013488;EXPECT['trem.glb']=2341420;EXPECT['pista.glb']=1638024;EXPECT['estatua.glb']=3684544;EXPECT['ponte.glb']=198408;
   EXPECT['ponte.glb']=198408;
   EXPECT['dancas.glb']=3821568;
