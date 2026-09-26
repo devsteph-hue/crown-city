@@ -479,7 +479,7 @@ const angDiff=(a,b)=>{let d=b-a;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+
 const IS_MOBILE=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)||('ontouchstart' in window&&innerWidth<900);
 
 /* ---------- versão dos arquivos (evita o navegador usar arquivo velho guardado) ---------- */
-const BUILD='202609260132';const ASSET=f=>f+'?v='+BUILD;
+const BUILD='202609260446';const ASSET=f=>f+'?v='+BUILD;
 /* ---------- save ---------- */
 const SAVE_KEY='crown-city-v1';
 let save={m:0,money:150,side:0,house:0};
@@ -821,7 +821,7 @@ const TINTS_VAR=['#ffe9dc','#e3ecff','#efe3ff','#e2ffe9','#fff6d8','#ffe0ea'],HA
 function variarMix(c,n){c.o.traverse(m=>{if(!m.isMesh)return;const mats=Array.isArray(m.material)?m.material:[m.material];const novos=mats.map(x=>{const y=x.clone();
     if(/hair/i.test(x.name||''))y.color=lin(HAIRV[(n*3+1)%HAIRV.length]);else y.color=lin(TINTS_VAR[(n-1+TINTS_VAR.length)%TINTS_VAR.length]);return y});m.material=Array.isArray(m.material)?novos:novos[0]});
   const esc=[1,1.045,.955,1.03,.97,1.06,.94][n%7];c.g.scale.setScalar(esc);c.variante=n}
-function makeChar(spec){if(spec.mix&&PEOPLE[spec.mix])return makeMixChar(spec.mix,spec);
+function makeChar(spec){if(spec.mix&&PEOPLE[spec.mix]&&typeof MXBASE!=='undefined'&&MXBASE&&MXBASE.clips)return makeMixChar(spec.mix,spec);if(spec.mix)spec=Object.assign({},randSpec(CIV),{shadow:spec.shadow});/* realista antes das animações-base: usa montável por enquanto */
   const o=THREE.SkeletonUtils.clone(TPL);const keep=new Set([headOf(spec.head),spec.body+'_Body',spec.legs+'_Legs',spec.feet+'_Feet','Pistol']);
   const rm=[];o.traverse(x=>{if(x.isMesh){const nm=x.name,pn=x.parent&&x.parent.name;if(!(keep.has(nm)||keep.has(pn)))rm.push(x);else{x.frustumCulled=false;x.castShadow=!!spec.shadow;x.receiveShadow=false}}});
   rm.forEach(x=>x.parent.remove(x));if(spec.vary)varyLook(o);else if(!spec.shadow&&!spec.fixo)varyPeleCabelo(o);
@@ -882,7 +882,7 @@ function nextGoal(a){
   if(a.cross){const[nbi,nbj]=a.cross.to;a.cross=null;a.ring=ringOf(nbi,nbj,a.lane);let best=0,bd=1e9;a.ring.p.forEach((p,k)=>{const d=Math.hypot(p[0]-a.pos.x,p[1]-a.pos.z);if(d<bd){bd=d;best=k}});a.ri=best}
   a.ri=(a.ri+a.dir+4)%4;const p=a.ring.p[a.ri];a.goal=new V3(p[0],.18,p[1]);
 }
-function separate(){const L=ACTORS.filter(a=>a.alive&&!(a===player&&player.car));for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){const a=L[i],b=L[j];const dx=b.pos.x-a.pos.x,dz=b.pos.z-a.pos.z,d2=dx*dx+dz*dz;
+function separate(){const L=ACTORS.filter(a=>a.alive&&!(a===player&&player.car)&&!(typeof BEIJO!=='undefined'&&BEIJO&&(a===player||a===BEIJO.a)));/* no beijo, as duas não são afastadas */for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){const a=L[i],b=L[j];const dx=b.pos.x-a.pos.x,dz=b.pos.z-a.pos.z,d2=dx*dx+dz*dz;
   if(d2<.36&&d2>1e-6){const d=Math.sqrt(d2),o=(.6-d)/d;const wa=a===player?.2:.5,wb=b===player?.2:.5;a.pos.x-=dx*o*wa;a.pos.z-=dz*o*wa;b.pos.x+=dx*o*wb;b.pos.z+=dz*o*wb;pushOut(a.pos,.35);pushOut(b.pos,.35)}}}
 const blockedAt=(x,z,r)=>COLL.some(c=>x>c.x0-r&&x<c.x1+r&&z>c.z0-r&&z<c.z1+r)||(typeof ISLANDS!=='undefined'&&ISLANDS.some(I=>x>I.box.min.x-r-6&&x<I.box.max.x+r+6&&z>I.box.min.z-r-6&&z<I.box.max.z+r+6));
 function moveActor(a,dx,dz,dt){const x0=a.pos.x,z0=a.pos.z;a.pos.x+=dx*dt;a.pos.z+=dz*dt;
@@ -904,7 +904,7 @@ const IDLES=['Idle','Idle_TalkingPhone_Loop','Idle_FoldArms_Loop','Consume','Idl
 function updateActor(a,dt,now){
   a.c.mixer.update(dt);if(a.kind==='player')return;
   if(a.actUntil&&now<a.actUntil)return;
-  if(a.vindo)return;// contato vindo até você: o andar é controlado em stepVisitas// fazendo uma animação de conversa (beijo, presente...): fica parada até terminar
+  if(a.vindo||a.parado)return;// parado no lugar: médico, enfermeira, policiais de plantão// contato vindo até você: o andar é controlado em stepVisitas// fazendo uma animação de conversa (beijo, presente...): fica parada até terminar
   if(!a.alive){a.deadT+=dt;if(a.deadT>30)a.remove=true;return}
   if(a.down){stepDown(a,dt);return}
   if(a.homie){homieAI(a,dt);return}if(a.crew)return;
@@ -2367,7 +2367,8 @@ function makeBoat(pos,yaw,col,kind){if(BOATMOD&&kind!=='proc'){const k=kind||(Ma
   body.position.y=-.35;g.position.copy(pos).setY(0);g.rotation.y=yaw;world.add(g);
   const c={cid:++CARID,type:'boat',boat:true,t:{L:7,W:2.6,H:1.4,max:26,acc:7.5},g,body,wheels:[],swheels:[],kit:false,pos:g.position,yaw,v:0,steer:0,driver:null,ai:null,hp:150,dead:false,stuckT:0,honkT:0,tail:M.tail.clone(),spin:0,siren:false,keep:true};CARS.push(c);return c}
 function physBoat(c,dt,thr,steer){const t=c.t;if(thr>0)c.v+=thr*t.acc*dt*(1-c.v/t.max);else if(thr<0)c.v=Math.max(-6,c.v+thr*9*dt);c.v-=c.v*.35*dt;
-  c.steer+=(steer-c.steer)*Math.min(1,dt*4);c.yaw+=c.steer*clamp(c.v/5,-1,1)*(c.bkind==='jet'?1.6:c.bkind==='tow'?.7:1.05)*dt;c.g.rotation.y=c.yaw;c.pos.addScaledVector(carFwd(c),c.v*dt);
+  c.steer+=(steer-c.steer)*Math.min(1,dt*4);c.yaw+=c.steer*clamp(c.v/5,-1,1)*(c.bkind==='jet'?1.6:c.bkind==='tow'?.7:1.05)*dt;c.g.rotation.y=c.yaw;{const ant=c.pos.clone();c.pos.addScaledVector(carFwd(c),c.v*dt);/* encalha na praia das ilhas: a proa não sobe na areia */
+    if(typeof islandY==='function'&&typeof ISLANDS!=='undefined'&&ISLANDS.length){const proa=c.pos.clone().addScaledVector(carFwd(c),Math.sign(c.v||1)*(c.t.L/2+.2));const y=islandY(proa);if(y!==null&&y>.12){c.pos.copy(ant);c.v*=-.15}}}
   const r=c.t.W/2+.3;if(c.pos.x<SEA_X+r){c.pos.x=SEA_X+r;if(Math.abs(c.v)>5){c.hp-=Math.abs(c.v);sfx('crash',c.pos.distanceTo(camera.position))}c.v*=-.25}
   for(const b of BOATCOLL){for(const q of circlesOf(c)){if(q.x>b.x0-r&&q.x<b.x1+r&&q.z>b.z0-r&&q.z<b.z1+r){const q0=q.clone();const dl=q.x-(b.x0-r),dr=(b.x1+r)-q.x,dt2=q.z-(b.z0-r),db=(b.z1+r)-q.z,m=Math.min(dl,dr,dt2,db);
     if(m===dl)q.x=b.x0-r;else if(m===dr)q.x=b.x1+r;else if(m===dt2)q.z=b.z0-r;else q.z=b.z1+r;c.pos.add(q.sub(q0));c.v*=.5}}}
@@ -3640,9 +3641,9 @@ barInside=function(){// mais gente, danças variadas e fora de sincronia
   for(const a of BAR_NPCS)removeActor(a);BAR_NPCS=[];if(!HCTX||!HCTX.bar||!houseG)return;const bd=houseG.userData.bounds;if(!bd)return;const[X0,X1,Z0,Z1]=bd;
   const ids=['gipsy','goth','redshirt','ninja','ch03','ch29','medea','ch48','ch28'].filter(i=>PEOPLE[i]);const keys=Object.keys(EXT.dances);if(!ids.length||!keys.length)return;
   const clube=HCTX.bar==='veludo',leve=QUALITY===0,n=clube?(leve?7:10):(leve?4:6);const[cx,cz]=centroPista();
-  const livre=q=>!COLL.some(c=>q.x>c.x0-.35&&q.x<c.x1+.35&&q.z>c.z0-.35&&q.z<c.z1+.35)&&q.distanceTo(player.pos)>1.6&&!BAR_NPCS.some(b=>b.pos.distanceTo(q)<.9);
+  const livre=q=>q.x>HO.x+X0+1&&q.x<HO.x+X1-1&&q.z>HO.z+Z0+1&&q.z<HO.z+Z1-1&&!COLL.some(c=>q.x>c.x0-.6&&q.x<c.x1+.6&&q.z>c.z0-.6&&q.z<c.z1+.6&&(c.h||9)>.4)&&q.distanceTo(player.pos)>1.6&&!BAR_NPCS.some(b=>b.pos.distanceTo(q)<.9);
   for(let i=0;i<n;i++){let p=null;for(let t=0;t<120&&!p;t++){// primeiro em volta da pista; se não couber, em qualquer lugar livre da sala
-      const q=t<80?(()=>{const r=.8+Math.random()*3,a=Math.random()*6.28;return new V3(HO.x+cx+Math.cos(a)*r,HO.y,HO.z+cz+Math.sin(a)*r)})():new V3(HO.x+X0+.6+Math.random()*(X1-X0-1.2),HO.y,HO.z+Z0+.6+Math.random()*(Z1-Z0-1.2));
+      const q=t<80?(()=>{const r=.8+Math.random()*Math.min(3.2,Math.max(1.2,Math.min(X1-X0,Z1-Z0)/2-1.4)),a=Math.random()*6.28;return new V3(HO.x+cx+Math.cos(a)*r,HO.y,HO.z+cz+Math.sin(a)*r)})():new V3(HO.x+X0+1.2+Math.random()*(X1-X0-2.4),HO.y,HO.z+Z0+1.2+Math.random()*(Z1-Z0-2.4));
       if(q.x>HO.x+X0+.4&&q.x<HO.x+X1-.4&&q.z>HO.z+Z0+.4&&q.z<HO.z+Z1-.4&&livre(q))p=q}
     if(!p)continue;const k=keys[(i*3+Math.floor(Math.random()*keys.length))%keys.length];const yaw=Math.atan2(HO.x+cx-p.x,HO.z+cz-p.z)+(Math.random()-.5)*1.2;
     const a=spawnDancer(p,ids[(i+Math.floor(Math.random()*ids.length))%ids.length],k,yaw);if(!a)continue;a.pos.y=HO.y;a.yaw0=yaw;
@@ -3650,7 +3651,9 @@ barInside=function(){// mais gente, danças variadas e fora de sincronia
   baladaSetup()};
 clubDecor=function(){CLUB_NPC.forEach(n=>n.g.parent&&n.g.parent.remove(n.g));CLUB_NPC=[]};// os bonecos que só acenavam saem; a balada cuida de tudo
 // centro da pista = o ponto DANÇAR (sempre numa área livre e alcançável); sem ele, o meio da sala
-function centroPista(){const s=typeof spots!=='undefined'&&spots.find(s=>s.id==='dancar');if(s)return[s.p.x-HO.x,s.p.z-HO.z];const bd=houseG.userData.bounds;return[(bd[0]+bd[1])/2,(bd[2]+bd[3])/2]}
+function centroPista(){// o ponto livre mais perto do MEIO do salão (antes era o ponto DANÇAR, às vezes encostado numa parede)
+  const bd=houseG.userData.bounds,cx=(bd[0]+bd[1])/2,cz=(bd[2]+bd[3])/2;const livre=(x,z)=>x>bd[0]+1.8&&x<bd[1]-1.8&&z>bd[2]+1.8&&z<bd[3]-1.8&&!COLL.some(c=>HO.x+x>c.x0-1.2&&HO.x+x<c.x1+1.2&&HO.z+z>c.z0-1.2&&HO.z+z<c.z1+1.2&&(c.h||9)>.4);
+  if(livre(cx,cz))return[cx,cz];for(let r=.5;r<8;r+=.5)for(let a=0;a<6.28;a+=.4){const x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r;if(livre(x,z))return[x,z]}return[cx,cz]}
 function emissivo(cor,forca=1){return new THREE.MeshBasicMaterial({color:lin(cor).multiplyScalar(forca),transparent:true,opacity:.9,depthWrite:false,blending:THREE.AdditiveBlending})}
 function baladaSetup(){BALADA=null;if(!HCTX||!HCTX.bar||!houseG)return;const bd=houseG.userData.bounds;if(!bd)return;const[X0,X1,Z0,Z1]=bd;
   const clube=HCTX.bar==='veludo',leve=QUALITY===0,[cx,cz]=centroPista(),teto=2.55;const G=new THREE.Group();G.name='balada';houseG.add(G);
@@ -3844,7 +3847,7 @@ if(typeof bubble==='function'){const _bubbleConv=bubble;bubble=function(a,t){_bu
 if(typeof nextLine==='function'){const _nextLineConv=nextLine;nextLine=function(){_nextLineConv.apply(this,arguments);if(typeof talkQ==='undefined'||!talkQ)return;const ln=talkQ.lines[talkQ.i];if(!ln)return;
   const a=typeof speakerActor==='function'?speakerActor(ln[0]):null;if(a&&a.c&&a.c.mix&&a.alive)playAct(a.c,/haha|kkk|rsrs|😂/i.test(ln[1]||'')?'rir':/!\s*$/.test(ln[1]||'')&&Math.random()<.35?'animada':'falar')}}
 // câmera: enquadra as duas personagens durante a conversa e a reação
-function cenaConvCam(dt){if(!CENA_CONV)return false;CENA_CONV.t-=dt;const a=CENA_CONV.a;if(CENA_CONV.t<=0||!a||!a.pos||pcar()||player.pos.distanceTo(a.pos)>5){CENA_CONV=null;return false}
+function cenaConvCam(dt){if(!CENA_CONV)return false;if(inHouse)return false;/* dentro de casa: câmera de cima, com as paredes cortadas */CENA_CONV.t-=dt;const a=CENA_CONV.a;if(CENA_CONV.t<=0||!a||!a.pos||pcar()||player.pos.distanceTo(a.pos)>5){CENA_CONV=null;return false}
   const meio=player.pos.clone().add(a.pos).multiplyScalar(.5),lado=new V3(-(a.pos.z-player.pos.z),0,a.pos.x-player.pos.x).normalize();
   // escolhe o lado sem prédio (a câmera não entra na parede)
   const livre=q=>!COLL.some(c=>q.x>c.x0-.3&&q.x<c.x1+.3&&q.z>c.z0-.3&&q.z<c.z1+.3&&c.h>1.2);
@@ -4058,7 +4061,11 @@ function tremPerto(){if(!TREM||TREM.dentro||TREM.parado<=0||pcar())return false;
 let PISTA=null;
 function nvPista(){if(PISTA||!NV.M.ilha||typeof ISLANDS==='undefined')return;const o=nvClone('ilha');o.position.copy(PISTA_C).setY(0);world.add(o);if(typeof assentarIlha==='function')assentarIlha(o);o.updateMatrixWorld(true);
   const b=new THREE.Box3().setFromObject(o),meshes=[];o.traverse(m=>{if(m.isMesh)meshes.push(m)});const isl={name:'Ilha da Pista',box:b,meshes,land:null};ISLANDS.push(isl);
-  const ctr=b.getCenter(new V3());let last=null;for(let d=0;d<160;d+=1){const q=new V3(ctr.x-d,0,ctr.z);const y=islandY(q);if(y!==null){last=q.setY(y)}else if(last)break}isl.land=last||ctr;
+  const ctr=b.getCenter(new V3());/* praia: procura em 16 direções a borda de terra (acima de 20 cm) e fica com a mais perto da cidade */
+  let melhor=null;for(let k=0;k<16;k++){const t=k/16*6.283,dx=Math.cos(t),dz=Math.sin(t);let last=null;for(let d=0;d<170;d+=1){const q=new V3(ctr.x+dx*d,0,ctr.z+dz*d);const y=islandY(q);if(y!==null&&y>.2)last=q.setY(y);else if(last&&y===null)break}
+    if(last){const baixo=last.y<1.5,mb=melhor&&melhor.y<1.5;if(!melhor||(baixo&&!mb)||(baixo===mb&&(baixo?last.x<melhor.x:last.y<melhor.y)))melhor=last}}isl.land=melhor||ctr;/* praia baixa, a mais perto da cidade */
+  /* ilha em platô (bordas em penhasco): abaixa até a borda ficar logo acima do mar, para dar para desembarcar */
+  if(melhor&&melhor.y>1.5){const dy=melhor.y-.45;o.position.y-=dy;o.updateMatrixWorld(true);isl.box=new THREE.Box3().setFromObject(o);isl.land=melhor.clone().setY(melhor.y-dy)}
   let topo=null;for(let x=b.min.x+8;x<b.max.x-8;x+=6)for(let z=b.min.z+8;z<b.max.z-8;z+=6){const q=new V3(x,0,z),y=islandY(q);if(y!==null&&(!topo||y>topo.y))topo=q.setY(y)}
   PISTA={isl,topo,ini:isl.land.clone(),t:0,ativo:false};
   if(typeof PONTE_PRONTA!=='undefined'&&PONTE_PRONTA&&typeof colocarPonte==='function'){const d=new V3(isl.land.x-ctr.x,0,isl.land.z-ctr.z).normalize();colocarPonte(isl.land.x,isl.land.z,d,Math.max(.3,isl.land.y),isl.name)}
@@ -4213,7 +4220,7 @@ function stepTaxi(dt){const T=TAXI;if(!T)return;const t=T.c;T.tt+=dt;const f=new
 function fadeTaxi(on){let el=document.getElementById('taxiFade');if(!el){el=document.createElement('div');el.id='taxiFade';document.body.appendChild(el)}el.innerHTML='';el.classList.toggle('on',on)}
 function taxiCam(dt){const T=TAXI;if(!T||!['anda','viaja'].includes(T.fase))return false;const t=T.c,f=new V3(Math.sin(t.yaw),0,Math.cos(t.yaw));
   const alvo=t.pos.clone().addScaledVector(f,-9).add(new V3(0,3.6,0));camera.position.lerp(alvo,Math.min(1,dt*3));camLook.copy(t.pos).addScaledVector(f,4).add(new V3(0,1,0));camera.lookAt(camLook);camPos.copy(camera.position);return true}
-const _updCamCenas=updateCamera;updateCamera=function(dt){if(taxiCam(dt))return;_updCamCenas(dt)};
+const _updCamCenas=updateCamera;updateCamera=function(dt){if(BEIJO)stepBeijo(0);if(taxiCam(dt))return;_updCamCenas(dt);camSemParede()};/* a trava do beijo roda no fim do quadro */
 // o táxi até o trabalho de um contato agora é mostrado
 taxiAte=function(c){const dest=destinoTrabalho(c);if(!dest)return;const T=TRABALHO[c.id];
   taxiViagem(dest,()=>{if(T.lugar==='bar'){const b=BARS[0];player.pos.copy(b.pos).setY(.18);barCool=0;HCTX={deco:b.deco,door:b.pos.clone(),bar:b.id};enterHouse();setTimeout(()=>colocarNoTrabalho(c),900)}
@@ -4236,11 +4243,19 @@ goOut=function(c){const r=relOf(c.id);if(typeof spawnContacts==='function')spawn
         if(L.k==='clube'){if(player.c.mix)playerDance(pick(Object.keys(EXT.dances)));if(na.c.mix)startDance(na.c,pick(Object.keys(EXT.dances)))}
         else{play(player.c,'Consume',{once:true});play(na.c,'Consume',{once:true})}
         setTimeout(()=>contactTalk(c,[L2(c.name,L.fala),L2('Você',pick(['Foi perfeito.','Obrigada pela companhia.','Repetimos semana que vem?']))],()=>{flutuar(na,'💗','#ff8fc4');fim()}),1600)},1000)}},a)};
-function stepCenas(dt){stepTaxi(dt)}
+// câmera que não fica atrás de parede: se tem prédio entre ela e quem ela olha, ela chega mais perto
+function camSemParede(){if(inHouse||!camera)return;const alvo=camLook.clone(),cam=camera.position.clone(),dir=cam.clone().sub(alvo),L=dir.length();if(L<1)return;dir.divideScalar(L);
+  let ok=L;for(let s=.6;s<L;s+=.35){const q=alvo.clone().addScaledVector(dir,s);if(COLL.some(c=>q.x>c.x0&&q.x<c.x1&&q.z>c.z0&&q.z<c.z1&&q.y<(c.h||9)&&(c.h||9)>1.4)){ok=Math.max(.8,s-.4);break}}
+  if(ok<L){camera.position.copy(alvo).addScaledVector(dir,ok);camera.lookAt(alvo)}}
+function stepCenas(dt){stepTaxi(dt);stepBeijo(dt)}
 /* ---------- romance: beijo e oba-oba (como no The Sims: a tela escurece com corações, nada explícito) ---------- */
-function beijar(c){const a=c.actor,p=player;if(!a)return;const d=a.pos.clone().sub(p.pos).setY(0);if(d.length()>1.1){const alvo=a.pos.clone().addScaledVector(d.normalize(),-.9);p.pos.copy(alvo).setY(p.pos.y)}
-  p.yaw=Math.atan2(a.pos.x-p.pos.x,a.pos.z-p.pos.z);p.c.g.rotation.y=p.yaw;turnTo(a,p.yaw+Math.PI,1,1);CENA_CONV={a,t:6,lado:null};
-  playAct(p.c,'kiss');playAct(a.c,'kiss2');setTimeout(()=>{flutuar(a,'💋💗','#ff8fc4');relGain(c,6)},1500)}
+function beijar(c){const a=c.actor,p=player;if(!a)return;const d=a.pos.clone().sub(p.pos).setY(0);if(d.lengthSq()<.01)d.set(1,0,0);const alvo=a.pos.clone().addScaledVector(d.normalize(),-.62);p.pos.x=alvo.x;p.pos.z=alvo.z;p.c.g.position.copy(p.pos);
+  p.yaw=Math.atan2(a.pos.x-p.pos.x,a.pos.z-p.pos.z);p.c.g.rotation.y=p.yaw;a.yaw=p.yaw+Math.PI;a.c.g.rotation.y=a.yaw;a.state='idle';CENA_CONV={a,t:6,lado:null};
+  playAct(p.c,'kiss');playAct(a.c,'kiss2');BEIJO={a,pp:p.pos.clone(),ap:a.pos.clone(),t:3.2};setTimeout(()=>{flutuar(a,'💋💗','#ff8fc4');relGain(c,6)},1500)}
+// durante o beijo as duas ficam travadas de frente, a 62 cm (o jogo afastava pessoas muito juntas)
+let BEIJO=null;
+function stepBeijo(dt){const B=BEIJO;if(!B)return;B.t-=dt;if(B.t<=0||!B.a.alive){BEIJO=null;return}player.pos.x=B.pp.x;player.pos.z=B.pp.z;player.c.g.position.copy(player.pos);B.a.pos.x=B.ap.x;B.a.pos.z=B.ap.z;B.a.c.g.position.copy(B.a.pos);
+  player.c.g.rotation.y=player.yaw=Math.atan2(B.ap.x-B.pp.x,B.ap.z-B.pp.z);B.a.c.g.rotation.y=B.a.yaw=player.yaw+Math.PI}
 function obaOba(c){const a=c.actor,p=player;if(!a)return;const cama=(spots||[]).find(s=>s.id==='cama');
   if(cama){p.pos.copy(cama.p).setY(p.pos.y);a.pos.copy(cama.p).add(new V3(.8,0,0)).setY(a.pos.y);a.c.g.position.copy(a.pos)}turnTo(a,Math.atan2(p.pos.x-a.pos.x,p.pos.z-a.pos.z),1,1);
   playAct(p.c,'blowkiss');playAct(a.c,'timida');CENA_CONV={a,t:3,lado:null};
@@ -4251,6 +4266,8 @@ function obaOba(c){const a=c.actor,p=player;if(!a)return;const cama=(spots||[]).
       if(p.hp!=null)p.hp=p.max;banner('💞 Vocês estão radiantes','Relação +10 · vida cheia')},4200)},1400)}
 // saída/encontro chamado de dentro de casa: sai de casa primeiro, depois pega o táxi
 const _goOutCasa=goOut;goOut=function(c){if(typeof inHouse!=='undefined'&&inHouse){const a=c.actor;exitHouse();setTimeout(()=>{if(a){a.pos.copy(player.pos).add(new V3(1.4,0,.6)).setY(.18);a.c.g.position.copy(a.pos)}_goOutCasa(c)},1300);return}_goOutCasa(c)};
+// a atualização da personagem (andar/esbarrar) rodava depois da trava e a empurrava para longe: trava de novo logo depois
+if(typeof updatePlayer==='function'){const _updPlayerBeijo=updatePlayer;updatePlayer=function(){const r=_updPlayerBeijo.apply(this,arguments);if(BEIJO)stepBeijo(0);return r}}
 /* ===================== DENTRO DE CASA: botão SAIR sempre visível (tecla Z) e visitas entram pela porta ===================== */
 function botaoSairCasa(){let b=document.getElementById('bSairCasa');if(!b){b=document.createElement('button');b.id='bSairCasa';b.innerHTML='<span>🚪</span>SAIR';b.onclick=e=>{e.stopPropagation();if(inHouse&&state==='play')exitHouse()};document.body.appendChild(b)}
   b.classList.toggle('on',!!(inHouse&&state==='play'))}
@@ -4282,8 +4299,11 @@ function morarJuntos(c){const r=relOf(c.id);const L=lares();const meus=['casa',.
     fn:()=>{closePanel();L[c.id]=o.id;persist();contactTalk(c,[L2('Você','E se a gente morasse junto? '+nomeImovel(o.id)+' é perfeito pra nós.'),L2(c.name,pick(['Sério?! Eu topo! Já vou levar minhas coisas.','Achei que você nunca ia pedir. Sim!','Morar com você? Claro que sim!']))],()=>{relGain(c,8);banner('🏠 '+c.name+' mora em '+nomeImovel(o.id),'Visite para manter a relação — e cuidado para não ser pega!')})}})).concat([{t:'Deixar para depois',s:'',b:'Ok',price:0,fn:()=>closePanel()}]))}
 // ---------- em casa: o parceiro que mora ali está lá dentro ----------
 let LAR_NPC=null;
+// ponto no chão da casa, perto de você e fora dos móveis (cama, sofá…)
+function pontoLivreCasa(c0,rmin,rmax){const bd=houseG&&houseG.userData.bounds;for(let t=0;t<60;t++){const r=rmin+Math.random()*(rmax-rmin),a=Math.random()*6.28;const q=new V3(c0.x+Math.cos(a)*r,HO.y,c0.z+Math.sin(a)*r);
+    if(bd&&!(q.x>HO.x+bd[0]+.5&&q.x<HO.x+bd[1]-.5&&q.z>HO.z+bd[2]+.5&&q.z<HO.z+bd[3]-.5))continue;if(!COLL.some(k=>q.x>k.x0-.45&&q.x<k.x1+.45&&q.z>k.z0-.45&&q.z<k.z1+.45))return q}return c0.clone().add(new V3(1.2,0,0)).setY(HO.y)}
 const _enterHouseV=enterHouse;enterHouse=function(){_enterHouseV.apply(this,arguments);const propId=(HCTX&&HCTX.prop)||(!HCTX?'casa':null);if(!propId)return;const c=moradorDe(propId);if(!c)return;
-  setTimeout(()=>{if(!inHouse)return;const s=(spots||[]).find(s=>s.id==='cama')||(spots||[])[1];const p=(s?s.p.clone():player.pos.clone()).add(new V3(1.2,0,.4));p.y=HO.y;
+  setTimeout(()=>{if(!inHouse)return;const p=pontoLivreCasa(player.pos,1.4,3.2);
     if(LAR_NPC&&LAR_NPC.a)removeActor(LAR_NPC.a);const a=spawnActor('boss',p,safeSpec(c.spec()));a.contact=c.id;a.ally=true;a.state='idle';LAR_NPC={a,c,antigo:c.actor};c.actor=a;a.visitou=NOW;
     turnTo(a,Math.atan2(player.pos.x-a.pos.x,player.pos.z-a.pos.z),1,1);bubble(a,pick(['Oi, amor! Que saudade.','Chegou! Tava te esperando.','Finalmente em casa, hein?']));relOf(c.id).visita=dayNum()},1000)};
 function stepLar(){if(LAR_NPC&&!inHouse){removeActor(LAR_NPC.a);LAR_NPC.c.actor=LAR_NPC.antigo&&LAR_NPC.antigo.alive?LAR_NPC.antigo:null;LAR_NPC=null}}
@@ -4301,7 +4321,65 @@ const _goOutV=goOut;goOut=function(c){_goOutV.apply(this,arguments);setTimeout((
 const _openContactV=openContact;openContact=function(c){const _op=openPanel;openPanel=function(t,sub,rows){openPanel=_op;const r=relOf(c.id);
     if(r.love){const i=rows.findIndex(x=>/Pedir ajuda/.test(x.t));const lar=lares()[c.id];rows.splice(i<0?rows.length:i,0,{t:'Morar juntos 🏠',s:lar?'Mora em '+nomeImovel(lar)+'. Trocar de lugar?':(r.v<90?'Precisa de mais intimidade (90).':'Convencer '+c.name+' a morar num dos seus imóveis.'),b:'🏠',price:0,dis:r.v<90,fn:()=>{closePanel();morarJuntos(c)}})}
     return _op.call(this,t,sub,rows)};try{_openContactV.apply(this,arguments)}finally{openPanel=_op}};
-function stepVidas(){casasNasIlhas();stepLar()}
+let BRIGA_T=0;
+function encontroDeParceiros(){if(NOW<BRIGA_T)return;const perto=CONTACTS.filter(c=>relOf(c.id).love&&c.actor&&c.actor.alive&&c.actor.pos.distanceTo(player.pos)<9&&!c.actor.vindo);if(perto.length<2)return;BRIGA_T=NOW+40;
+  const[A,B]=perto;for(const[x,y]of[[A,B],[B,A]]){const a=x.actor;a.yaw=Math.atan2(y.actor.pos.x-a.pos.x,y.actor.pos.z-a.pos.z);a.c.g.rotation.y=a.yaw;if(typeof playAct==='function')playAct(a.c,'brava')}
+  setTimeout(()=>{bubble(A.actor,'Quem é '+B.name+'?! O que ele(a) tá fazendo aqui?!');flutuar&&flutuar(A.actor,'😡','#ff6b6b')},300);
+  setTimeout(()=>{bubble(B.actor,pick(['Eu é que pergunto! Você me enganou!','Então é assim?! Duas vidas?!']));flutuar&&flutuar(B.actor,'💔','#ff6b6b')},2000);
+  setTimeout(()=>{for(const x of[A,B]){relGain(x,-25);const r=relOf(x.id);if(r.v<45&&r.love){r.love=false;delete lares()[x.id];persist();banner('💔 '+x.name+' terminou com você','Os dois se encontraram')}}
+    banner('😱 Seus parceiros se encontraram',A.name+' e '+B.name+' descobriram tudo');const sai=B.actor;if(sai&&sai!==(LAR_NPC&&LAR_NPC.a)){sai.visitou=NOW-999;sai.state='walk'}},3600)}
+function stepVidas(){casasNasIlhas();stepLar();encontroDeParceiros()}
+/* ===================== CIDADE REALISTA: só carros realistas, polícia e ambulância de verdade, hospital e delegacia com gente ===================== */
+// ---------- personagens com esqueleto (cada um no seu arquivo: os ossos têm o mesmo nome) ----------
+const GENTE2=['medico','enfermeira','policial','socorrista'];for(const id of GENTE2)MIX_EXCLUSIVOS.add(id);let G2_PEDIDO=false;
+function carregarGente2(){if(G2_PEDIDO||typeof peopleLoaded==='undefined'||!peopleLoaded)return;G2_PEDIDO=true;
+  for(const id of GENTE2)loadBig(id+'.glb',g=>{const o=g.scene.getObjectByName('P_'+id);if(o){o.traverse(m=>{if(m.isMesh&&m.material){const ms=Array.isArray(m.material)?m.material:[m.material];ms.forEach(x=>{x.alphaTest=Math.max(x.alphaTest||0,.4)})}});PEOPLE[id]=o}},null,()=>{})}
+// policiais das perseguições com o modelo realista
+const _spawnActorCid=spawnActor;spawnActor=function(kind,pos,spec){if(kind==='cop'&&PEOPLE.policial&&(!spec||!spec.mix))spec={mix:'policial'};return _spawnActorCid.call(this,kind,pos,spec)};
+// ---------- carros: polícia, ambulância e bombeiros realistas; nenhum tipo sobra "de brinquedo" ----------
+Object.assign(SUPER,{ambulancia:{name:'Ambulância',s:1,L:5.2,W:2.3,H:2.3,max:34,acc:10},viatura:{name:'Viatura',s:1,L:4.9,W:1.85,H:1.45,max:50,acc:15},vanpol:{name:'Van da polícia',s:1,L:5.3,W:2.1,H:2.3,max:38,acc:11}});
+Object.assign(REALMAP,{delivery:['gt12','vantage'],garbage:['vantage'],tractor:['gt12'],flat:['vantage'],firetruck:['vantage'],ambulance:['vantage']});
+let EMERG=false;
+function carregarEmergencia(){if(EMERG)return;EMERG=true;loadBig('emergencia.glb',g=>{for(const k of['ambulancia','viatura','vanpol']){const o=g.scene.getObjectByName('NV_'+k);if(o)SCM[k]=o}
+    if(SCM.viatura)REALMAP.police=SCM.vanpol?['viatura','viatura','vanpol']:['viatura'];if(SCM.ambulancia){REALMAP.ambulance=['ambulancia'];REALMAP.firetruck=['ambulancia']}
+    // troca as viaturas e ambulâncias antigas que já estão na rua
+    for(const c of CARS.slice())if((c.type==='police'||c.type==='ambulance')&&c.super&&!['viatura','vanpol','ambulancia'].includes(c.sid)&&c!==pcar()&&!c.keep)removeCar(c)},null,()=>{})}
+// trânsito só depois dos carros realistas (antes disso nascia carro de brinquedo)
+const _spawnTrafficCid=spawnTraffic;spawnTraffic=function(near){if(!superLoaded)return null;return _spawnTrafficCid.apply(this,arguments)};
+// ---------- quem fica parado no lugar (médico, enfermeira, socorrista, policiais de plantão) ----------
+function plantao(id,pos,yaw,papel,fala){if(!PEOPLE[id])return null;const a=_spawnActorCid('civ',pos.clone().setY(.18),{mix:id});if(!a)return null;a.parado=true;a.papel=papel;a.fala=fala;a.yaw=yaw;a.c.g.rotation.y=yaw;play(a.c,'Idle');return a}
+let HOSP_NPC=null,DELEG_NPC=null;
+function frenteDoLote(kind){const bc=blockC(...SPECIAL[kind]);const p=(typeof PLACE!=='undefined'?PLACE:[]).filter(q=>q.x!=null).sort((a,b)=>Math.hypot(a.x-bc.x,a.z-bc.z)-Math.hypot(b.x-bc.x,b.z-bc.z))[0];
+  const rot=p?p.rot:0,f=new V3(Math.sin(rot),0,Math.cos(rot));const base=p?new V3(p.x,.18,p.z):bc.clone();return{base,f,rot,p}}
+const vivoNaCena=a=>a&&a.alive&&ACTORS.includes(a);
+function montarHospital(){if(!PEOPLE.medico||!PEOPLE.enfermeira||!SCM.ambulancia)return;if(HOSP_NPC&&vivoNaCena(HOSP_NPC.medico))return;const{base,f,rot}=frenteDoLote('hospital');const lado=new V3(f.z,0,-f.x);
+  const porta=base.clone().addScaledVector(f,BLK*.42);if(player.pos.distanceTo(porta)>110&&HOSP_NPC)return;const jaTinha=!!HOSP_NPC;if(HOSP_NPC)for(const k of['medico','enf','soc'])if(HOSP_NPC[k])removeActor(HOSP_NPC[k]);HOSP_NPC={};
+  HOSP_NPC.medico=plantao('medico',porta.clone().addScaledVector(lado,-1),rot+Math.PI*.7,'medico','Precisa de atendimento? A consulta sai rapidinho.');
+  HOSP_NPC.enf=plantao('enfermeira',porta.clone().addScaledVector(lado,.3),rot-Math.PI*.7,'medico','O doutor atende você agora mesmo.');
+  const amb=jaTinha?null:makeSuperCar('ambulancia',porta.clone().addScaledVector(lado,6).addScaledVector(f,2.5).setY(.18),rot+Math.PI/2);if(amb){amb.keep=true;amb.parked=true;amb.type='ambulance'}
+  HOSP_NPC.soc=plantao('socorrista',porta.clone().addScaledVector(lado,4.2).addScaledVector(f,1),rot+Math.PI,'socorro','Pronto para a próxima chamada.')}
+function montarDelegacia(){if(!NV.M.delegacia)return;if(DELEG_NPC&&(!PEOPLE.policial||vivoNaCena(DELEG_NPC.p1)))return;const{base,f,rot,p}=frenteDoLote('police');
+  if(DELEG_NPC){if(player.pos.distanceTo(base)>110)return;const porta=DELEG_NPC.porta,lado=DELEG_NPC.lado;for(const k of['p1','p2'])if(DELEG_NPC[k])removeActor(DELEG_NPC[k]);
+    DELEG_NPC.p1=plantao('policial',porta.clone().addScaledVector(lado,1.4),rot,'policia','Delegacia de Crown City. Algum problema?');DELEG_NPC.p2=plantao('policial',porta.clone().addScaledVector(lado,3),rot-.4,'policia','Circulando, circulando.');return}
+  // troca o prédio antigo pelo da delegacia (mesmo lugar, mesmo tamanho de lote)
+  if(p){for(const o of world.children.slice())if(o.position&&Math.abs(o.position.x-p.x)<.5&&Math.abs(o.position.z-p.z)<.5&&o.type!=='Mesh')world.remove(o)}
+  const d=nvClone('delegacia');const larg=BLK*.82;d.scale.setScalar(larg/34);d.position.copy(base);d.rotation.y=rot;world.add(d);
+  const porta=base.clone().addScaledVector(f,12.7*larg/34/2+2.2);const lado=new V3(f.z,0,-f.x);DELEG_NPC={porta,lado};
+  if(NV.M.policiala){const e=nvClone('policiala');e.position.copy(porta).addScaledVector(lado,-3.2);e.rotation.y=rot;world.add(e)}
+  if(PEOPLE.policial){DELEG_NPC.p1=plantao('policial',porta.clone().addScaledVector(lado,1.4),rot,'policia','Delegacia de Crown City. Algum problema?');DELEG_NPC.p2=plantao('policial',porta.clone().addScaledVector(lado,3),rot-.4,'policia','Circulando, circulando.')}
+  if(SCM.viatura){const v=makeSuperCar('viatura',porta.clone().addScaledVector(lado,-8).addScaledVector(f,3).setY(.18),rot+Math.PI/2);if(v){v.keep=true;v.parked=true;v.type='police'}}}
+// ---------- conversar com o médico: consulta ----------
+const _openTalkCid=openTalk;openTalk=function(){const a=ACTORS.find(x=>x.alive&&x.papel&&x.pos.distanceTo(player.pos)<2.6);if(a&&!pcar()){PIE_ACTOR=a;
+    if(a.papel==='medico')openPanel('Hospital de Crown City',a.fala,[{t:'Consulta',s:'Vida cheia na hora.',b:'$ 150',price:150,fn:()=>{closePanel();player.hp=player.max;sfx('cash');if(typeof playAct==='function')playAct(a.c,'falar');banner('🩺 Consulta','Vida cheia. Se cuida, hein!')}},{t:'Só passando',s:'',b:'Ok',price:0,fn:()=>{closePanel();bubble(a,'Qualquer coisa, estamos aqui.')}}]);
+    else{closePanel&&closePanel();bubble(a,a.fala);if(typeof playAct==='function')playAct(a.c,'falar')}return}_openTalkCid.apply(this,arguments)};
+// assim que os carros realistas carregam, troca os "de brinquedo" que nasceram antes (trânsito some e renasce; estacionados trocam no lugar)
+let TROCA_T=0;
+function trocarBrinquedos(){if(!superLoaded||NOW<TROCA_T)return;TROCA_T=NOW+2;for(const c of CARS.slice()){if(c.super||c.boat||c===pcar()||c.dead||c.driver==='taxi')continue;
+    if(!c.keep){removeCar(c);continue}if(c.parked&&!c.target&&!c.mission){const n=makeCar(c.type,c.pos.clone(),c.yaw);if(n&&n.super){n.keep=true;n.parked=true;removeCar(c)}else if(n)removeCar(n)}}}
+function stepCidade(){trocarBrinquedos();carregarGente2();if(typeof EXT!=='undefined'&&(EXT.ready||NOW>20))carregarEmergencia();if(typeof nvCarregar==='function'&&typeof EXT!=='undefined'&&(EXT.ready||NOW>25))nvCarregar('delegacia.glb');
+  if(typeof cityBuilt==='undefined'||cityBuilt){montarHospital();montarDelegacia()}
+  // médico e enfermeira conversam de vez em quando
+  if(HOSP_NPC&&HOSP_NPC.medico&&Math.random()<.004&&typeof playAct==='function'){playAct(pick([HOSP_NPC.medico,HOSP_NPC.enf]).c,pick(['falar','rir','sim']))}}
 const pedal={gas:false,brake:false,left:false,right:false,steer:0};
 /* ===================== CONTROLES ===================== */
 const keys={};
@@ -4374,7 +4452,8 @@ function checkFiles(em){const L=$('loadTxt');L.innerHTML='Conferindo os arquivos
   .then(rs=>{L.innerHTML=rs.map(([f,n,got,h])=>{const ok=got===n&&h&&String.fromCharCode(...h)==='glTF';
       const tx=got===null?'sem conexão':got<0?'não encontrado (erro '+(-got)+')':(got.toLocaleString('pt-BR')+' bytes'+(got!==n?' — deveria ter '+n.toLocaleString('pt-BR'):''));
       return (ok?'✓ ':'✗ ')+'<b>'+f+'</b>: '+tx}).join('<br>')+'<br><span style="opacity:.7">Os arquivos com ✗ precisam ser enviados de novo (baixe no computador, confira o tamanho e suba). Detalhe técnico: '+em+'</span>'})}
-function assetStatus(){const L=[['predios.glb','Prédios realistas'],['extras.glb','Extras (bares, ilhas, danças)'],['texturas.glb','Texturas reais'],['interiores.glb','Interiores e torre'],['supercarros.glb','Carros realistas'],['gente.glb','Pessoas realistas'],['aereo.glb','Helicóptero, heliporto e ondas'],['dancas.glb','Danças, beijos e conversas'],['ponte.glb','Pontes de madeira'],['bmw.glb','Concessionária BMW'],['moto.glb','Moto BMW S1000 RR'],['trem.glb','Trem e trilhos'],['pista.glb','Ilha da Pista'],['estatua.glb','Estátua Aurora'],['loft.glb','Loft no Centro (interior)'],['casa.glb','Casa Vermelha'],['jorge.glb','Seu Jorge (personagem)'],['loft13.glb','Apartamento Moderno (interior)']];
+function assetStatus(){const L=[['predios.glb','Prédios realistas'],['extras.glb','Extras (bares, ilhas, danças)'],['texturas.glb','Texturas reais'],['interiores.glb','Interiores e torre'],['supercarros.glb','Carros realistas'],['gente.glb','Pessoas realistas'],['aereo.glb','Helicóptero, heliporto e ondas'],['dancas.glb','Danças, beijos e conversas'],['ponte.glb','Pontes de madeira'],['bmw.glb','Concessionária BMW'],['moto.glb','Moto BMW S1000 RR'],['trem.glb','Trem e trilhos'],['pista.glb','Ilha da Pista'],['estatua.glb','Estátua Aurora'],['loft.glb','Loft no Centro (interior)'],['casa.glb','Casa Vermelha'],['jorge.glb','Seu Jorge (personagem)'],['loft13.glb','Apartamento Moderno (interior)'],['emergencia.glb','Viatura, van da polícia e ambulância'],['delegacia.glb','Delegacia'],['medico.glb','Médico'],['enfermeira.glb','Enfermeira'],['policial.glb','Policial'],['socorrista.glb','Socorrista']];
+  EXPECT['emergencia.glb']=5382840;EXPECT['delegacia.glb']=1283284;EXPECT['medico.glb']=4575440;EXPECT['enfermeira.glb']=4242680;EXPECT['policial.glb']=1593912;EXPECT['socorrista.glb']=3534788;
   EXPECT['loft13.glb']=3423076;
   EXPECT['jorge.glb']=1726744;
   EXPECT['loft.glb']=2767592;EXPECT['casa.glb']=3636416;
@@ -4418,7 +4497,7 @@ function loop(t){requestAnimationFrame(loop);const dt=Math.min(.05,(t-last)/1000
   if(atkHeld&&player.gun&&WEAP[player.weapon].auto)doAttack();
   updatePlayer(dt);const P=player.pos;
   for(const a of ACTORS){if(a===player)continue;const d=a.pos.distanceTo(P);if(d>70&&frame%3)continue;updateActor(a,d>70?dt*3:dt,NOW)}
-  stepDay(dt);stepFolego(dt);stepBalada(dt);stepAereo(dt);stepConversa(dt);stepTeclas(dt);stepAutoTiro(dt);stepNovos(dt);stepContatos(dt);stepCenas(dt);stepCasa();stepVidas();stepPontes(dt);stepHud();if(!window._cullOk&&typeof fixInstCull==='function'&&NOW>2){window._cullOk=1;fixInstCull()}if(NOW>6&&window._cullOk===1){window._cullOk=2;fixInstCull()}stepTalk(dt);stepRain(dt);stepAllies(dt);stepBubbles(dt);stepServices(dt);stepRadio(dt);stepSea(dt);stepCrowns(dt);stepBeauty(dt);stepBoatRiders(dt);stepTyping(dt);stepContacts(dt);stepEvents(dt);stepAim(dt);stepShopFront(dt);stepLook(dt);stepPicks(dt);autosave(dt);stepDrivers(dt);stepVest();stepRadio2();stepSkids(dt);stepAssist(dt);stepHolster();stepProps(dt);stepChests(dt);stepWheel();stepPie();stepBars(dt);stepPlayerDance();stepJump(dt);stepClubDoor(dt);stepClub(dt);separate();updateCars(dt,NOW);stepDebris(dt);stepFX(dt);stepCash(dt);stepMolotov(dt);checkShop(dt);checkHouseDoor(dt);checkActivities(dt);checkHints(dt);if(inHouse)spots.forEach(s=>s.m.material.opacity=.45+.35*Math.sin(NOW*4));managePolice(dt);checkMission(dt);
+  stepDay(dt);stepFolego(dt);stepBalada(dt);stepAereo(dt);stepConversa(dt);stepTeclas(dt);stepAutoTiro(dt);stepNovos(dt);stepContatos(dt);stepCenas(dt);stepCasa();stepVidas();stepCidade();stepPontes(dt);stepHud();if(!window._cullOk&&typeof fixInstCull==='function'&&NOW>2){window._cullOk=1;fixInstCull()}if(NOW>6&&window._cullOk===1){window._cullOk=2;fixInstCull()}stepTalk(dt);stepRain(dt);stepAllies(dt);stepBubbles(dt);stepServices(dt);stepRadio(dt);stepSea(dt);stepCrowns(dt);stepBeauty(dt);stepBoatRiders(dt);stepTyping(dt);stepContacts(dt);stepEvents(dt);stepAim(dt);stepShopFront(dt);stepLook(dt);stepPicks(dt);autosave(dt);stepDrivers(dt);stepVest();stepRadio2();stepSkids(dt);stepAssist(dt);stepHolster();stepProps(dt);stepChests(dt);stepWheel();stepPie();stepBars(dt);stepPlayerDance();stepJump(dt);stepClubDoor(dt);stepClub(dt);separate();updateCars(dt,NOW);stepDebris(dt);stepFX(dt);stepCash(dt);stepMolotov(dt);checkShop(dt);checkHouseDoor(dt);checkActivities(dt);checkHints(dt);if(inHouse)spots.forEach(s=>s.m.material.opacity=.45+.35*Math.sin(NOW*4));managePolice(dt);checkMission(dt);
   keepT-=dt;if(keepT<=0){keepT=2;checkGarage();keepRaceCar();keepBoats()}
   popT-=dt;if(popT<=0){popT=.5;if(!inHouse){managePop();manageParked()}accrue();}
   updateCamera(dt);updHUD(dt);if(frame%3===0)drawMinimap();if(frame%10===0)updButtons();loopSounds();
